@@ -1,0 +1,25 @@
+Firestore
+|
+|-- events (Collection)
+|   |-- eventID (Document)
+|       |-- eventTitle: String
+|       |-- eventURL: String
+|       |-- eventPhoto: String
+|       |-- eventLocation: String
+|       |-- eventStartTime: Timestamp
+|       |-- eventEndTime: Timestamp
+|       |-- eventDescription: String
+|       |-- eventPoints: Integer
+|       |-- savedUsers: Array<String>
+|
+|-- users (Collection)
+|   |-- userUID (Document)
+|       |-- firstName: String
+|       |-- lastName: String
+|       |-- userProfileURL: String
+|       |-- userBUID: String
+|       |-- userEmail: String
+|       |-- userSchool: String
+|       |-- userYear: String
+|       |-- userPoints: Integer
+|       |-- userSavedEvents: Map<String, Boolean>
