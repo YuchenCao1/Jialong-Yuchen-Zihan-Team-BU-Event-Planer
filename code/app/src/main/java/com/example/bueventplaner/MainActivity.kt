@@ -41,29 +41,40 @@ class MainActivity : ComponentActivity() {
     private fun authenticateUser(username: String, password: String) {
         val database = Firebase.database.reference.child("users").child(username)
         database.get().addOnSuccessListener {
-            val storedPassword = it.child("password").value
-            if (storedPassword == password) {
-                Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show()
+            if (it.exists()) {
+                val storedPassword = it.child("password").value
+                if (storedPassword == password) {
+                    Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Invalid password", Toast.LENGTH_SHORT).show()
+                }
             } else {
-                Toast.makeText(this, "Invalid username or password", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "User not found", Toast.LENGTH_SHORT).show()
             }
-        }.addOnFailureListener {
-            Toast.makeText(this, "Failed to connect to database", Toast.LENGTH_SHORT).show()
+        }.addOnFailureListener { exception ->
+            Toast.makeText(this, "Failed to connect to database: ${exception.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun registerUser(username: String, password: String) {
         val database = Firebase.database.reference.child("users").child(username)
         val userData = mapOf(
-            "username" to username,
             "password" to password
         )
-
-        database.setValue(userData).addOnSuccessListener {
-            Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show()
-        }.addOnFailureListener {
-            Toast.makeText(this, "Failed to register user", Toast.LENGTH_SHORT).show()
+        database.get().addOnSuccessListener {
+            if (it.exists()) {
+                Toast.makeText(this, "User exists!", Toast.LENGTH_SHORT).show()
+            } else {
+                database.setValue(userData).addOnSuccessListener {
+                    Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show()
+                }.addOnFailureListener {
+                    Toast.makeText(this, "Failed to register user", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }.addOnFailureListener { exception ->
+            Toast.makeText(this, "Failed to connect to database: ${exception.message}", Toast.LENGTH_SHORT).show()
         }
+
     }
 }
 
@@ -126,13 +137,3 @@ fun AuthPage(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun AuthPagePreview() {
-    BUEventPlanerTheme {
-        AuthPage(
-            onLogin = { _, _ -> },
-            onRegister = { _, _ -> }
-        )
-    }
-}
