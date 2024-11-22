@@ -16,34 +16,36 @@ import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 
 @Composable
-fun LoginPage(navController: NavController) {
+fun SignupPage(navController: NavController) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         content = { paddingValues ->
-            AuthPage(
+            AuthPage2(
                 modifier = Modifier.padding(paddingValues),
                 navController = navController,
-                onLogin = { username, password ->
-                    authenticateUser(username, password, navController)
-                },
+                onRegister = { username, password ->
+                    registerUser(username, password, navController)
+                }
             )
         }
     )
 }
 
-private fun authenticateUser(username: String, password: String, navController: NavController) {
+private fun registerUser(username: String, password: String, navController: NavController) {
     val database = Firebase.database.reference.child("users").child(username)
+    val userData = mapOf(
+        "password" to password
+    )
     database.get().addOnSuccessListener {
         if (it.exists()) {
-            val storedPassword = it.child("password").value
-            if (storedPassword == password) {
-                Toast.makeText(navController.context, "Login successful!", Toast.LENGTH_SHORT).show()
-                navController.navigate("home")
-            } else {
-                Toast.makeText(navController.context, "Invalid password", Toast.LENGTH_SHORT).show()
-            }
+            Toast.makeText(navController.context, "User exists!", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(navController.context, "User not found", Toast.LENGTH_SHORT).show()
+            database.setValue(userData).addOnSuccessListener {
+                Toast.makeText(navController.context, "Registration successful!", Toast.LENGTH_SHORT).show()
+                navController.navigate("login")
+            }.addOnFailureListener {
+                Toast.makeText(navController.context, "Failed to register user", Toast.LENGTH_SHORT).show()
+            }
         }
     }.addOnFailureListener { exception ->
         Toast.makeText(navController.context, "Failed to connect to database: ${exception.message}", Toast.LENGTH_SHORT).show()
@@ -52,10 +54,10 @@ private fun authenticateUser(username: String, password: String, navController: 
 
 
 @Composable
-fun AuthPage(
-    navController: NavController,
+fun AuthPage2(
     modifier: Modifier = Modifier,
-    onLogin: (String, String) -> Unit,
+    navController: NavController,
+    onRegister: (String, String) -> Unit
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -66,7 +68,7 @@ fun AuthPage(
             .padding(16.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("This is Login!")
+        Text("This is Register!")
         Spacer(modifier = Modifier.height(8.dp))
         TextField(
             value = username,
@@ -89,20 +91,20 @@ fun AuthPage(
 
         Button(
             onClick = {
-                    onLogin(username, password)
+                onRegister(username, password)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Login")
+            Text("Register")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         TextButton(
-            onClick = { navController.navigate("signup")},
+            onClick = { navController.navigate("login") },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Switch to Register")
+            Text("Switch to Login")
         }
     }
 }

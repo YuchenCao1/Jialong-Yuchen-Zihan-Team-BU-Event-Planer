@@ -71,5 +71,8 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-database-ktx")
+    // Jetpack Compose Navigation
+    implementation("androidx.navigation:navigation-compose:2.7.3")
+
 
 }
