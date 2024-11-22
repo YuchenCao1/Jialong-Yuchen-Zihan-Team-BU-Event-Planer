@@ -1,138 +1,63 @@
-package com.example.bueventplaner
-
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
-import com.example.bueventplaner.ui.theme.BUEventPlanerTheme
-import com.google.firebase.database.ktx.database
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.ktx.initialize
+import com.example.bu_passport.ui.theme.BuPassportTheme
+import com.example.bu_passport.auth.AuthGate
+import com.example.bu_passport.pages.ExplorePage
+import com.example.bu_passport.pages.LoginPage
+import com.example.bu_passport.pages.ProfilePage
+import com.example.bu_passport.pages.SignUpPage
+import com.example.bu_passport.pages.OnboardingPage
+import com.jakewharton.timber.Timber
+import java.util.TimeZone
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize Firebase
+        FirebaseApp.initializeApp(this)
+
+        // Timezone initialization for check in
+        TimeZone.setDefault(TimeZone.getTimeZone("America/New_York"))
+
         setContent {
-            BUEventPlanerTheme {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    content = { paddingValues ->
-                        AuthPage(
-                            modifier = Modifier.padding(paddingValues),
-                            onLogin = { username, password ->
-                                authenticateUser(username, password)
-                            },
-                            onRegister = { username, password ->
-                                registerUser(username, password)
-                            }
-                        )
-                    }
-                )
-            }
+            MyApp()
         }
-    }
-
-    private fun authenticateUser(username: String, password: String) {
-        val database = Firebase.database.reference.child("users").child(username)
-        database.get().addOnSuccessListener {
-            if (it.exists()) {
-                val storedPassword = it.child("password").value
-                if (storedPassword == password) {
-                    Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, "Invalid password", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                Toast.makeText(this, "User not found", Toast.LENGTH_SHORT).show()
-            }
-        }.addOnFailureListener { exception ->
-            Toast.makeText(this, "Failed to connect to database: ${exception.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun registerUser(username: String, password: String) {
-        val database = Firebase.database.reference.child("users").child(username)
-        val userData = mapOf(
-            "password" to password
-        )
-        database.get().addOnSuccessListener {
-            if (it.exists()) {
-                Toast.makeText(this, "User exists!", Toast.LENGTH_SHORT).show()
-            } else {
-                database.setValue(userData).addOnSuccessListener {
-                    Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show()
-                }.addOnFailureListener {
-                    Toast.makeText(this, "Failed to register user", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }.addOnFailureListener { exception ->
-            Toast.makeText(this, "Failed to connect to database: ${exception.message}", Toast.LENGTH_SHORT).show()
-        }
-
     }
 }
 
 @Composable
-fun AuthPage(
-    modifier: Modifier = Modifier,
-    onLogin: (String, String) -> Unit,
-    onRegister: (String, String) -> Unit
-) {
-    var isLoginMode by remember { mutableStateOf(true) }
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center
-    ) {
-        TextField(
-            value = username,
-            onValueChange = { username = it },
-            label = { Text("Username") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                if (isLoginMode) {
-                    onLogin(username, password)
-                } else {
-                    onRegister(username, password)
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (isLoginMode) "Login" else "Register")
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextButton(
-            onClick = { isLoginMode = !isLoginMode },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (isLoginMode) "Switch to Register" else "Switch to Login")
+fun MyApp() {
+    BuPassportTheme {
+        Surface {
+            // Your navigation setup here
+            // For example, using Jetpack Navigation Component
+            // NavHost(navController, startDestination = "auth_gate") {
+            //     composable("auth_gate") { AuthGate() }
+            //     composable("onboarding") { OnboardingPage() }
+            //     composable("login") { LoginPage() }
+            //     composable("signup") { SignUpPage() }
+            //     composable("home") { AuthGate() }
+            //     composable("explore_page") { ExplorePage() }
+            //     composable("profile_page") { ProfilePage() }
+            // }
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DefaultPreview() {
+    MyApp()
 }
 
