@@ -73,6 +73,9 @@ dependencies {
     implementation("com.google.firebase:firebase-database-ktx")
     // Jetpack Compose Navigation
     implementation("androidx.navigation:navigation-compose:2.7.2")
+    implementation ("com.google.accompanist:accompanist-pager:0.30.1")
+    implementation ("com.google.accompanist:accompanist-pager-indicators:0.30.1")
+
 
 
 }
