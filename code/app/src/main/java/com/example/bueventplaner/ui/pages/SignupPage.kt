@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -53,6 +54,7 @@ private fun registerUser(username: String, password: String, navController: NavC
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthPage2(
     modifier: Modifier = Modifier,
@@ -68,43 +70,86 @@ fun AuthPage2(
             .padding(16.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("This is Register!")
-        Spacer(modifier = Modifier.height(8.dp))
-        TextField(
-            value = username,
-            onValueChange = { username = it },
-            label = { Text("Username") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = {
-                onRegister(username, password)
-            },
-            modifier = Modifier.fillMaxWidth()
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            Text("Register")
-        }
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Sign up",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
 
-        Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-        TextButton(
-            onClick = { navController.navigate("login") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Switch to Login")
+                // Username
+                TextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.textFieldColors(
+                        containerColor = Color.White,
+                        focusedIndicatorColor = Color(0xFFCC0000),
+                        unfocusedIndicatorColor = Color.Gray,
+                        focusedLabelColor = Color(0xFFCC0000),
+                        unfocusedLabelColor = Color.Gray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Password
+                TextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.textFieldColors(
+                        containerColor = Color.White,
+                        focusedIndicatorColor = Color(0xFFCC0000),
+                        unfocusedIndicatorColor = Color.Gray,
+                        focusedLabelColor = Color(0xFFCC0000),
+                        unfocusedLabelColor = Color.Gray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // register button
+                Button(
+                    onClick = {
+                        onRegister(username, password)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCC0000))
+                ) {
+                    Text("Register", style = MaterialTheme.typography.labelLarge, color = Color.White)
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // switch to login
+                TextButton(
+                    onClick = { navController.navigate("login") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Already have an account? Log in",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF3366CC)
+                    )
+                }
+            }
         }
     }
 }
