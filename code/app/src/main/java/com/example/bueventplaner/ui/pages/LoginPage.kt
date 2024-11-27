@@ -185,15 +185,28 @@ fun AuthPage(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TextButton(
-                    onClick = { navController.navigate("signup") },
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Don’t have an account? Sign up",
+                        text = "Don’t have an account?",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF3366CC)
+                        color = Color.Black,
+                        modifier = Modifier.alignByBaseline()
                     )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    TextButton(
+                        onClick = { navController.navigate("signup") },
+                        modifier = Modifier.alignByBaseline(),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            text = "Sign up",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF3366CC)
+                        )
+                    }
                 }
             }
         }
