@@ -8,6 +8,8 @@ import com.example.bueventplaner.ui.pages.EventDetailsView
 import com.example.bueventplaner.ui.pages.EventListPage
 import com.example.bueventplaner.ui.pages.LoginPage
 import com.example.bueventplaner.ui.pages.SignupPage
+import com.example.bueventplaner.ui.pages.OnboardingPage
+import com.example.bueventplaner.ui.pages.ProfilePage
 
 @Composable
 fun NavGraph(navController: NavHostController) {
@@ -17,5 +19,8 @@ fun NavGraph(navController: NavHostController) {
         composable("home") { /* TODO: Home Page Implementation */ }
         composable("event_list") { EventListPage(navController) }
         composable("event_details") { EventDetailsView(navController) }
+        composable("onboarding") { OnboardingPage(navController) }
+        composable("profile") { ProfilePage(navController) }
+
     }
 }

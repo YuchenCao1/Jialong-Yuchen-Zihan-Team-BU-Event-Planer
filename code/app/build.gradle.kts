@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.material.icons.extended)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -71,15 +73,20 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-database-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
     // Jetpack Compose Navigation
     implementation("androidx.navigation:navigation-compose:2.7.3")
-    //
-    // Pager (Compose Foundation)
+
+    implementation ("com.google.accompanist:accompanist-pager:0.30.1")
+    implementation ("com.google.accompanist:accompanist-pager-indicators:0.30.1")
+
+
     implementation ("androidx.compose.foundation:foundation:1.5.0")
     // Optional: For animations
     implementation ("androidx.compose.animation:animation:1.5.0")
 
-    implementation ("androidx.compose.material3:material3:1.2.0") // 确保版本为最新
+    implementation ("androidx.compose.material3:material3:1.2.0")
     implementation ("androidx.compose.material3:material3-window-size-class:1.2.0")
 
     implementation("io.coil-kt:coil-compose:2.2.2")
