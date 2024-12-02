@@ -77,9 +77,19 @@ dependencies {
     implementation("com.google.firebase:firebase-storage-ktx")
     // Jetpack Compose Navigation
     implementation("androidx.navigation:navigation-compose:2.7.3")
+
     implementation ("com.google.accompanist:accompanist-pager:0.30.1")
     implementation ("com.google.accompanist:accompanist-pager-indicators:0.30.1")
-    // Coil for image loading
-    implementation ("io.coil-kt:coil-compose:2.2.2")
+
+
+    implementation ("androidx.compose.foundation:foundation:1.5.0")
+    // Optional: For animations
+    implementation ("androidx.compose.animation:animation:1.5.0")
+
+    implementation ("androidx.compose.material3:material3:1.2.0")
+    implementation ("androidx.compose.material3:material3-window-size-class:1.2.0")
+
+    implementation("io.coil-kt:coil-compose:2.2.2")
+
 
 }

@@ -3,6 +3,7 @@ package com.example.bueventplaner
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.navigation.compose.rememberNavController
 import com.example.bueventplaner.ui.navigation.NavGraph
@@ -23,7 +24,12 @@ class MainActivity : ComponentActivity() {
 fun MyApp() {
     val navController = rememberNavController()
 
-    BUEventPlanerTheme {
+//    BUEventPlanerTheme {
+//        Surface {
+//            NavGraph(navController = navController)
+//        }
+//    }
+    MaterialTheme {
         Surface {
             NavGraph(navController = navController)
         }
