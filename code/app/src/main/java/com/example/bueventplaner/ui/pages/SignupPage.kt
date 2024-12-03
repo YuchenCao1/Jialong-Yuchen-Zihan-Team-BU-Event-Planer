@@ -13,7 +13,7 @@ import com.example.bueventplaner.data.model.User
 import com.example.bueventplaner.ui.theme.BUEventPlanerTheme
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
-import java.util.*
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun SignupPage(navController: NavController) {
@@ -31,45 +31,19 @@ fun SignupPage(navController: NavController) {
     )
 }
 
-private fun registerUser(
-    username: String,
-    password: String,
-    firstName: String,
-    lastName: String,
-    navController: NavController
-) {
-    val database = Firebase.database.reference.child("users").child(username)
 
-
-    val user = User(
-        username = username,
-        firstName = firstName,
-        lastName = lastName,
-        password = password,
-        userProfileURL = "default", // 默认值为空
-        userEmail = "default", // 默认值为空
-        userBUID = "default", // 默认值为空
-        userSchool = "default", // 默认值为空
-        userYear = "default", // 默认值为空
-        userImage = "default", // 默认值为空
-        userSavedEvents = emptyList() // 空的事件列表
-    )
-
-    database.get().addOnSuccessListener {
-        if (it.exists()) {
-            Toast.makeText(navController.context, "User exists!", Toast.LENGTH_SHORT).show()
-        } else {
-            // 上传完整的用户数据到 Firebase
-            database.setValue(user).addOnSuccessListener {
+private fun registerUser(email: String, password: String, navController: NavController) {
+    val auth = FirebaseAuth.getInstance()
+    auth.createUserWithEmailAndPassword(email, password)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
                 Toast.makeText(navController.context, "Registration successful!", Toast.LENGTH_SHORT).show()
                 navController.navigate("login")
-            }.addOnFailureListener {
-                Toast.makeText(navController.context, "Failed to register user", Toast.LENGTH_SHORT).show()
+            } else {
+                val errorMessage = task.exception?.message ?: "Registration failed"
+                Toast.makeText(navController.context, errorMessage, Toast.LENGTH_SHORT).show()
             }
         }
-    }.addOnFailureListener { exception ->
-        Toast.makeText(navController.context, "Failed to connect to database: ${exception.message}", Toast.LENGTH_SHORT).show()
-    }
 }
 
 
@@ -80,7 +54,7 @@ fun AuthPage2(
     navController: NavController,
     onRegister: (String, String, String, String) -> Unit
 ) {
-    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
@@ -141,9 +115,9 @@ fun AuthPage2(
 
                 // Username
                 TextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Username") },
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.textFieldColors(
                         containerColor = Color.White,
@@ -173,7 +147,7 @@ fun AuthPage2(
                 // Register button
                 Button(
                     onClick = {
-                        onRegister(username, password, firstName, lastName)
+                        onRegister(email, password)
                     },
                     modifier = Modifier
                         .fillMaxWidth()

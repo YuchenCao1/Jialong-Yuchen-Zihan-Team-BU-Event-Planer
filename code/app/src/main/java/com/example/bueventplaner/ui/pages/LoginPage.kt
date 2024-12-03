@@ -19,6 +19,7 @@ import com.example.bueventplaner.R
 import com.example.bueventplaner.ui.theme.BUEventPlanerTheme
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginPage(navController: NavController) {
@@ -36,24 +37,19 @@ fun LoginPage(navController: NavController) {
     )
 }
 
-private fun authenticateUser(username: String, password: String, navController: NavController) {
-    val database = Firebase.database.reference.child("users").child(username)
-    database.get().addOnSuccessListener {
-        if (it.exists()) {
-            val storedPassword = it.child("password").value
-            if (storedPassword == password) {
+private fun authenticateUser(email: String, password: String, navController: NavController) {
+    val auth = FirebaseAuth.getInstance()
+    auth.signInWithEmailAndPassword(email, password)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
                 Toast.makeText(navController.context, "Login successful!", Toast.LENGTH_SHORT).show()
                 navController.navigate("event_list")
             } else {
-                Toast.makeText(navController.context, "Invalid password", Toast.LENGTH_SHORT).show()
+                Toast.makeText(navController.context, "Login failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
             }
-        } else {
-            Toast.makeText(navController.context, "User not found", Toast.LENGTH_SHORT).show()
         }
-    }.addOnFailureListener { exception ->
-        Toast.makeText(navController.context, "Failed to connect to database: ${exception.message}", Toast.LENGTH_SHORT).show()
-    }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
