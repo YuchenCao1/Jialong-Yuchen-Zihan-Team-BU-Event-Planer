@@ -62,7 +62,6 @@ fun EventListPage(navController: NavController) {
         }
     }
 
-    // Update filteredEvents whenever searchQuery changes
     LaunchedEffect(searchQuery) {
         filteredEvents = if (searchQuery.isEmpty()) {
             allEvents
@@ -91,79 +90,81 @@ fun EventListPage(navController: NavController) {
         },
         modifier = Modifier.background(color = Color.White)
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(color = Color.White)
+                .background(color = Color.White),
+            contentPadding = PaddingValues(vertical = 16.dp)
         ) {
-            // Search Bar
-            TextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Search...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = "Search Icon")
-                },
-                colors = TextFieldDefaults.textFieldColors(containerColor = Color(0xFFF0F0F0))
-            )
+            item {
+                // Search Bar
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    leadingIcon = {
+                        Icon(imageVector = Icons.Default.Search, contentDescription = "Search Icon")
+                    },
+                    colors = TextFieldDefaults.textFieldColors(containerColor = Color(0xFFF0F0F0))
+                )
+            }
 
             if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
             } else {
                 if (searchQuery.isEmpty()) {
-                    // Show ImageSlider when no search query
-                    Spacer(modifier = Modifier.height(16.dp))
-                    ImageSlider(
-                        events = filteredEvents.take(4),
-                        onClick = { eventId ->
-                            navController.navigate("event_details/$eventId")
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Recommended For You",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ImageSlider(
+                            events = filteredEvents.take(4),
+                            onClick = { eventId ->
+                                navController.navigate("event_details/$eventId")
+                            }
+                        )
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Recommended For You",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
                 }
 
-                // Always show filtered events
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 16.dp)
-                ) {
-                    if (filteredEvents.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(top = 50.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("No events found.", style = MaterialTheme.typography.bodyMedium)
-                            }
+                items(filteredEvents) { event ->
+                    EventCard(
+                        title = event.title,
+                        date = "${event.startTime} - ${event.endTime}",
+                        location = event.location,
+                        photoPath = event.photo,
+                        onClick = {
+                            navController.navigate("event_details/${event.id}")
                         }
-                    } else {
-                        items(filteredEvents) { event ->
-                            EventCard(
-                                title = event.title,
-                                date = "${event.startTime} - ${event.endTime}",
-                                location = event.location,
-                                photoPath = event.photo,
-                                onClick = {
-                                    navController.navigate("event_details/${event.id}")
-                                }
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (filteredEvents.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = 50.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No events found.", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
@@ -287,14 +288,12 @@ fun BottomNavigationBar(navController: NavController) {
                 label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
                 selected = currentRoute == item.route,
                 onClick = {
-                    if (currentRoute != item.route) {
-                        navController.navigate(item.route) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
                         }
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 }
             )
