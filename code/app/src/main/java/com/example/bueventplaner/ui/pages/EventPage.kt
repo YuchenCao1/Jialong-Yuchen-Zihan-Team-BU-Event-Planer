@@ -3,6 +3,7 @@ package com.example.bueventplaner.ui.pages
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,6 +42,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.ktx.database
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -327,13 +330,27 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
     val context = LocalContext.current
     var event by remember { mutableStateOf<Event?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var isRegistered by remember { mutableStateOf(false) }
 
-    // Fetch event data from Firebase
+    // Fetch event details and check registration status
     LaunchedEffect(eventId) {
         eventId?.let {
             FirebaseService.fetchEventById(context, it) { fetchedEvent ->
                 event = fetchedEvent
                 isLoading = false
+
+                val currentUser = FirebaseAuth.getInstance().currentUser
+                if (currentUser != null) {
+                    val userId = currentUser.uid
+                    val userRef = Firebase.database.reference.child("users").child(userId)
+                    userRef.child("savedEvents").get().addOnSuccessListener { snapshot ->
+                        // Use explicit type casting to avoid type inference issues
+                        val savedEvents = snapshot.getValue() as? List<String> ?: emptyList()
+                        isRegistered = eventId in savedEvents
+                    }.addOnFailureListener {
+                        println("Failed to fetch saved events: ${it.message}")
+                    }
+                }
             }
         }
     }
@@ -485,22 +502,43 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
                     }
                 }
                 item {
+                    // Display Register Button
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
-                        onClick = { /* Handle Register */ },
+                        onClick = {
+                            if (isRegistered) {
+                                FirebaseService.unregisterEventForUser(eventId!!) { isSuccess ->
+                                    if (isSuccess) {
+                                        Toast.makeText(context, "Event unregistered successfully!", Toast.LENGTH_SHORT).show()
+                                        isRegistered = false
+                                    } else {
+                                        Toast.makeText(context, "Failed to unregister event. Please try again.", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } else {
+                                FirebaseService.registerEventForUser(eventId!!) { isSuccess ->
+                                    if (isSuccess) {
+                                        Toast.makeText(context, "Event registered successfully!", Toast.LENGTH_SHORT).show()
+                                        isRegistered = true
+                                    } else {
+                                        Toast.makeText(context, "Failed to register event. Please try again.", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        },
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
                             .fillMaxWidth()
                             .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCC0000))
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isRegistered) Color.Gray else Color.Red)
                     ) {
                         Text(
-                            text = "Register",
+                            text = if (isRegistered) "Unregister" else "Register",
                             color = Color.White,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.bodyLarge
                         )
                     }
+
                 }
             }
         } else {
@@ -510,11 +548,13 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Event not found or failed to load.", style = MaterialTheme.typography.bodyLarge)
+                Text("Event not found or failed to load.")
             }
         }
     }
 }
+
+
 
 
 

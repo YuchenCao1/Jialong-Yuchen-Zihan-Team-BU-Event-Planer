@@ -15,6 +15,7 @@ import androidx.navigation.NavController
 import com.example.bueventplaner.ui.theme.BUEventPlanerTheme
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun SignupPage(navController: NavController) {
@@ -32,25 +33,18 @@ fun SignupPage(navController: NavController) {
     )
 }
 
-private fun registerUser(username: String, password: String, navController: NavController) {
-    val database = Firebase.database.reference.child("users").child(username)
-    val userData = mapOf(
-        "password" to password
-    )
-    database.get().addOnSuccessListener {
-        if (it.exists()) {
-            Toast.makeText(navController.context, "User exists!", Toast.LENGTH_SHORT).show()
-        } else {
-            database.setValue(userData).addOnSuccessListener {
+private fun registerUser(email: String, password: String, navController: NavController) {
+    val auth = FirebaseAuth.getInstance()
+    auth.createUserWithEmailAndPassword(email, password)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
                 Toast.makeText(navController.context, "Registration successful!", Toast.LENGTH_SHORT).show()
                 navController.navigate("login")
-            }.addOnFailureListener {
-                Toast.makeText(navController.context, "Failed to register user", Toast.LENGTH_SHORT).show()
+            } else {
+                val errorMessage = task.exception?.message ?: "Registration failed"
+                Toast.makeText(navController.context, errorMessage, Toast.LENGTH_SHORT).show()
             }
         }
-    }.addOnFailureListener { exception ->
-        Toast.makeText(navController.context, "Failed to connect to database: ${exception.message}", Toast.LENGTH_SHORT).show()
-    }
 }
 
 
@@ -61,7 +55,7 @@ fun AuthPage2(
     navController: NavController,
     onRegister: (String, String) -> Unit
 ) {
-    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
     Column(
@@ -90,9 +84,9 @@ fun AuthPage2(
 
                 // Username
                 TextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Username") },
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.textFieldColors(
                         containerColor = Color.White,
@@ -126,7 +120,7 @@ fun AuthPage2(
                 // register button
                 Button(
                     onClick = {
-                        onRegister(username, password)
+                        onRegister(email, password)
                     },
                     modifier = Modifier
                         .fillMaxWidth()

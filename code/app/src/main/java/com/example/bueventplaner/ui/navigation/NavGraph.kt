@@ -13,7 +13,7 @@ import com.example.bueventplaner.ui.pages.ProfilePage
 
 @Composable
 fun NavGraph(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = "event_list") {
+    NavHost(navController = navController, startDestination = "signup") {
         composable("login") { LoginPage(navController) }
         composable("signup") { SignupPage(navController) }
         composable("home") { /* TODO: Home Page Implementation */ }

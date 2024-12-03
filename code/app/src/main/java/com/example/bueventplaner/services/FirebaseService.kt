@@ -6,7 +6,9 @@ import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import com.google.android.gms.tasks.Task
 import android.net.Uri
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.ktx.storage
+import com.google.firebase.database.GenericTypeIndicator
 
 object FirebaseService {
     fun fetchEvents(context: Context, callback: (List<Event>) -> Unit) {
@@ -71,6 +73,63 @@ object FirebaseService {
         }.addOnFailureListener { exception ->
             println("Failed to fetch event: ${exception.message}")
             callback(null)
+        }
+    }
+    fun registerEventForUser(eventId: String, callback: (Boolean) -> Unit) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            callback(false)
+            return
+        }
+
+        val userId = currentUser.uid
+        val userSavedEventsRef = Firebase.database.reference
+            .child("users")
+            .child(userId)
+            .child("savedEvents")
+
+        userSavedEventsRef.get().addOnSuccessListener { snapshot ->
+            val savedEvents = snapshot.getValue() as? List<String> ?: emptyList()
+            val updatedSavedEvents = savedEvents.toMutableList().apply {
+                if (!contains(eventId)) add(eventId)
+            }
+
+            userSavedEventsRef.setValue(updatedSavedEvents).addOnSuccessListener {
+                callback(true)
+            }.addOnFailureListener {
+                callback(false)
+            }
+        }.addOnFailureListener {
+            callback(false)
+        }
+    }
+
+    fun unregisterEventForUser(eventId: String, callback: (Boolean) -> Unit) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            callback(false)
+            return
+        }
+
+        val userId = currentUser.uid
+        val userSavedEventsRef = Firebase.database.reference
+            .child("users")
+            .child(userId)
+            .child("savedEvents")
+
+        userSavedEventsRef.get().addOnSuccessListener { snapshot ->
+            val savedEvents = snapshot.getValue() as? List<String> ?: emptyList()
+            val updatedSavedEvents = savedEvents.toMutableList().apply {
+                remove(eventId)
+            }
+
+            userSavedEventsRef.setValue(updatedSavedEvents).addOnSuccessListener {
+                callback(true)
+            }.addOnFailureListener {
+                callback(false)
+            }
+        }.addOnFailureListener {
+            callback(false)
         }
     }
 }
