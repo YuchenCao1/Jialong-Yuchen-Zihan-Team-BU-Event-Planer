@@ -257,11 +257,27 @@ fun TabSection(navController: NavController, userSavedEvents: MutableList<Event>
         }
 
         when (selectedTab) {
-            0 -> EventList(navController, events = userSavedEvents)
-            1 -> EventList(navController, events = userSavedEvents)
+            0 -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No events reviewed.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+            }
+            1 -> {
+                EventList(navController, events = userSavedEvents)
+            }
         }
     }
 }
+
 
 @Composable
 fun EventList(navController: NavController, events: List<Event>) {

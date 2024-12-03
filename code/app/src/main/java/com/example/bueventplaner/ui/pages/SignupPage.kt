@@ -182,16 +182,28 @@ fun AuthPage2(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // switch to login
-                TextButton(
-                    onClick = { navController.navigate("login") },
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Already have an account? Log in",
+                        text = "Already have an account?",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF3366CC)
+                        color = Color.Black,
+                        modifier = Modifier.alignByBaseline()
                     )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    TextButton(
+                        onClick = { navController.navigate("login") },
+                        modifier = Modifier.alignByBaseline(),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            text = "Log in",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF3366CC)
+                        )
+                    }
                 }
             }
         }
