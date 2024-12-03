@@ -15,7 +15,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -23,19 +22,39 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.example.bueventplaner.R
 import com.example.bueventplaner.data.model.Event
+import com.example.bueventplaner.services.FirebaseService
+import com.example.bueventplaner.services.FirebaseService.fetchUserFullName
+import com.example.bueventplaner.services.FirebaseService.updateProfileImageUrl
+import com.example.bueventplaner.services.FirebaseService.uploadImageToFirebase
 import com.example.bueventplaner.ui.viewmodels.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
-import com.example.bueventplaner.R
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = viewModel()) {
     var isEditing by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Variables to hold fetched user data
+    var firstName by remember { mutableStateOf("Loading...") }
+    var lastName by remember { mutableStateOf("Loading...") }
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+    // Fetch the user data using the fetchUserFullName function
+    LaunchedEffect(Unit) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        currentUser?.let { user ->
+            fetchUserFullName { fetchedFirstName, fetchedLastName ->
+                firstName = fetchedFirstName
+                lastName = fetchedLastName
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -71,7 +90,7 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                ProfileHeader(viewModel = viewModel, isEditing = isEditing)
+                ProfileHeader(viewModel = viewModel, isEditing = isEditing, firstName = firstName, lastName = lastName, photoPath = "profilePics/${userId}.jpg")
                 TabSection(viewModel = viewModel)
             }
         }
@@ -79,14 +98,16 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
 }
 
 @Composable
-fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean) {
+fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: String, lastName: String, photoPath: String) {
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val userId = currentUser?.uid ?: ""
     val coroutineScope = rememberCoroutineScope()
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             coroutineScope.launch {
-                viewModel.uploadImageToFirebase(it) { downloadUrl ->
+                uploadImageToFirebase(it) { downloadUrl ->
                     if (downloadUrl != null) {
-                        viewModel.updateProfileImageUrl(downloadUrl)
+                        updateProfileImageUrl(downloadUrl)
                     }
                 }
             }
@@ -99,18 +120,19 @@ fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val profileImagePainter = rememberAsyncImagePainter(viewModel.profileImageUrl.value)
         Box(
             modifier = Modifier
                 .size(100.dp)
                 .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
-                .clickable { launcher.launch("image/*") } // 打开文件选择器
+                .clickable { launcher.launch("image/*") } // Open file picker
         ) {
-            Image(
-                painter = profileImagePainter,
+            AsyncImage(
+                model = photoPath,
                 contentDescription = "Profile Picture",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp)
             )
         }
 
@@ -118,18 +140,18 @@ fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean) {
 
         if (isEditing) {
             TextField(
-                value = viewModel.firstName.value,
-                onValueChange = { viewModel.firstName.value = it },
+                value = firstName,
+                onValueChange = { /* Handle firstName editing */ },
                 label = { Text("First Name") }
             )
             TextField(
-                value = viewModel.lastName.value,
-                onValueChange = { viewModel.lastName.value = it },
+                value = lastName,
+                onValueChange = { /* Handle lastName editing */ },
                 label = { Text("Last Name") }
             )
         } else {
             Text(
-                text = "${viewModel.firstName.value} ${viewModel.lastName.value}",
+                text = "$firstName $lastName",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -197,3 +219,5 @@ fun EventCard(event: Event) {
         }
     }
 }
+
+

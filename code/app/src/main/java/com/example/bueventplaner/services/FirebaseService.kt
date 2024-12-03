@@ -7,8 +7,11 @@ import com.google.firebase.ktx.Firebase
 import com.google.android.gms.tasks.Task
 import android.net.Uri
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.ktx.storage
 import com.google.firebase.database.GenericTypeIndicator
+import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.tasks.await
 
 object FirebaseService {
     fun fetchEvents(context: Context, callback: (List<Event>) -> Unit) {
@@ -111,6 +114,31 @@ object FirebaseService {
         }.addOnFailureListener { callback(false) }
     }
 
+    fun fetchUserFullName(callback: (String, String) -> Unit) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            callback("Unknown", "Unknown")
+            return
+        }
+
+        val userId = currentUser.uid
+        val userRef = Firebase.database.reference
+            .child("users")
+            .child(userId)
+
+        userRef.get().addOnSuccessListener { snapshot ->
+            if (snapshot.exists()) {
+                val firstName = snapshot.child("firstName").getValue(String::class.java) ?: "Unknown"
+                val lastName = snapshot.child("lastName").getValue(String::class.java) ?: "Unknown"
+                callback(firstName, lastName)
+            } else {
+                callback("Unknown", "Unknown")
+            }
+        }.addOnFailureListener {
+            callback("Unknown", "Unknown")
+        }
+    }
+
     fun unregisterEventForUser(eventId: String, callback: (Boolean) -> Unit) {
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
@@ -144,6 +172,41 @@ object FirebaseService {
                 }.addOnFailureListener { callback(false) }
             }.addOnFailureListener { callback(false) }
         }.addOnFailureListener { callback(false) }
+    }
+
+
+    suspend fun uploadImageToFirebase(uri: Uri, onResult: (String?) -> Unit) {
+        val storageReference = FirebaseStorage.getInstance().reference
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        val userId = currentUser?.uid
+        val fileName = "profilePics/${userId}.jpg"
+        val ref = storageReference.child(fileName)
+
+        try {
+            ref.putFile(uri).await()
+            val downloadUrl = ref.downloadUrl.await().toString()
+            onResult(downloadUrl)
+        } catch (e: Exception) {
+            println("Failed to upload image: ${e.message}")
+            onResult(null)
+        }
+    }
+
+
+    fun updateProfileImageUrl(downloadUrl: String) {
+        val databaseReference = FirebaseDatabase.getInstance().reference
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        currentUser?.uid?.let { userId ->
+            val userRef = databaseReference.child("users").child(userId)
+
+            userRef.child("profileImageUrl").setValue(downloadUrl)
+                .addOnSuccessListener {
+                    println("Profile image URL updated successfully.")
+                }
+                .addOnFailureListener { e ->
+                    println("Failed to update profile image URL: ${e.message}")
+                }
+        }
     }
 
 }
