@@ -13,12 +13,15 @@ import com.example.bueventplaner.ui.pages.ProfilePage
 
 @Composable
 fun NavGraph(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = "profile") {
+    NavHost(navController = navController, startDestination = "event_list") {
         composable("login") { LoginPage(navController) }
         composable("signup") { SignupPage(navController) }
         composable("home") { /* TODO: Home Page Implementation */ }
         composable("event_list") { EventListPage(navController) }
-        composable("event_details") { EventDetailsView(navController) }
+        composable("event_details/{eventId}") { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId")
+            EventDetailsView(navController, eventId)
+        }
         composable("onboarding") { OnboardingPage(navController) }
         composable("profile") { ProfilePage(navController) }
 

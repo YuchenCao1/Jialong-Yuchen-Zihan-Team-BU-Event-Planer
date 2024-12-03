@@ -1,4 +1,3 @@
-// MainActivity.kt
 package com.example.bueventplaner.ui.pages
 
 import androidx.compose.animation.animateColorAsState
@@ -35,17 +34,35 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.*
 import coil.compose.AsyncImage
 import com.example.bueventplaner.R
+import com.example.bueventplaner.services.FirebaseService
+import com.example.bueventplaner.data.model.Event
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.platform.LocalContext
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun EventListPage(navController: NavController) {
+    val context = LocalContext.current
+    var events by remember { mutableStateOf<List<Event>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        FirebaseService.fetchEvents(context) { fetchedEvents ->
+            events = fetchedEvents
+            isLoading = false
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Explore", style = MaterialTheme.typography.titleLarge) },
                 actions = {
-                    IconButton(onClick = { /* Profile Action */ }) {
+                    IconButton(onClick = { navController.navigate("profile") }) {
                         Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
                     }
                 }
@@ -77,103 +94,107 @@ fun EventListPage(navController: NavController) {
                 colors = TextFieldDefaults.textFieldColors(containerColor = Color(0xFFF0F0F0))
             )
 
-            // Featured Events Slider
-            Spacer(modifier = Modifier.height(16.dp))
-            ImageSlider(navController = navController)
-
-            // Recommended Events
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Recommended For You",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            EventCard(
-                title = "Boston Youth Symphony Orchestras Concert",
-                date = "Nov 3, 2023 - Nov 5, 2023",
-                location = "888 Commonwealth Ave",
-                onClick = { navController.navigate("event_details") },
-                drawableResId = R.drawable.dance
-            )
-            // You can add more EventCards here
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                // Featured Events Slider
+                Spacer(modifier = Modifier.height(16.dp))
+                ImageSlider(
+                    events = events.take(4),
+                    onClick = { eventId ->
+                        navController.navigate("event_details/$eventId")
+                    }
+                )
+                // Recommended Events
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Recommended For You",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 16.dp)
+                ) {
+                    items(events) { event ->
+                        EventCard(
+                            title = event.title,
+                            date = "${event.startTime} - ${event.endTime}",
+                            location = event.location,
+                            photoPath = event.photo,
+                            onClick = {
+                                navController.navigate("event_details/${event.id}")
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ImageSlider(navController: NavController) {
-    val images = listOf(
-        R.drawable.concert, // Replace these with your actual image resources
-        R.drawable.concert,
-        R.drawable.concert
-    )
-
-    val pagerState = rememberPagerState(0,0f,{3})
+fun ImageSlider(events: List<Event>, onClick: (String) -> Unit) {
+    val pagerState = rememberPagerState(0, 0f, { events.size })
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(240.dp)
     ) {
-        // Horizontal Pager
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(240.dp)
         ) { page ->
-            Image(
-                painter = painterResource(id = images[page]),
-                contentDescription = "Slider Image $page",
+            val event = events[page]
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(240.dp),
-                contentScale = ContentScale.Crop
-            )
+                    .clickable { onClick(event.id) },
+                shape = RoundedCornerShape(0.dp)
+            ) {
+                if (event.photo.isNotEmpty()) {
+                    AsyncImage(
+                        model = event.photo,
+                        contentDescription = "Slider Image $page",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp)
+                    )
+                } else {
+                    // Placeholder if URL is empty
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp)
+                            .background(Color.Gray),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Image not available", color = Color.White)
+                    }
+                }
+            }
         }
 
-        // Dot Indicator (Floating over the image)
         CustomDotIndicator(
             pagerState = pagerState,
             modifier = Modifier
-                .align(Alignment.BottomCenter) // Align at the bottom center of the Box
-                .padding(bottom = 16.dp) // Add some padding to avoid cutting off
-        )
-    }
-
-    // Event Information Section (Below the Image)
-    Spacer(modifier = Modifier.height(16.dp))
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
-        Text(
-            text = "Boston Youth Symphony Orchestras Concert",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "Nov 3, 2023 - Nov 5, 2023",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "View event",
-            style = MaterialTheme.typography.bodySmall.copy(
-                color = Color.Blue,
-                textDecoration = TextDecoration.Underline
-            ),
-            modifier = Modifier.clickable {
-                navController.navigate("event_details")
-            }
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
         )
     }
 }
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CustomDotIndicator(
@@ -219,7 +240,7 @@ fun EventCard(
     title: String,
     date: String,
     location: String,
-    drawableResId: Int, // Drawable (Documentation resources) ID
+    photoPath: String,
     onClick: () -> Unit
 ) {
     Card(
@@ -231,75 +252,40 @@ fun EventCard(
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Upper part: background image
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-            ) {
-                // Loading a Local Drawable Resource with painterResource
-                Image(
-                    painter = painterResource(id = drawableResId),
+            if (photoPath.isNotEmpty()) {
+                AsyncImage(
+                    model = photoPath,
                     contentDescription = "Event Image",
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
                 )
-                // Caption text superimposed on an image
+            } else {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
-                                startY = 50f
-                            )
-                        )
-                )
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(color = Color.White),
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(16.dp)
-                )
-            }
-
-            // Next part: Dates and venues
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "Attended",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                    Text(
-                        text = date,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .background(Color.Gray),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Loading...", style = MaterialTheme.typography.bodySmall, color = Color.White)
                 }
-                Text(
-                    text = location,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
+            }
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(text = title, style = MaterialTheme.typography.titleMedium)
+                Text(text = date, style = MaterialTheme.typography.bodySmall)
+                Text(text = location, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
 }
 
-
-
 @Composable
 fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
         BottomNavItem("Search", Icons.Default.Search, "event_list"),
-        BottomNavItem("Profile", Icons.Default.Person, "event_list") // "profile" route can be added
+        BottomNavItem("Profile", Icons.Default.Person, "profile")
     )
 
     NavigationBar(
@@ -312,16 +298,12 @@ fun BottomNavigationBar(navController: NavController) {
                 label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
                 selected = currentRoute == item.route,
                 onClick = {
-                    // Prevent multiple copies of the same destination
                     if (currentRoute != item.route) {
                         navController.navigate(item.route) {
-                            // Pop up to the start destination of the graph to avoid building up a large stack of destinations
                             popUpTo(navController.graph.startDestinationId) {
                                 saveState = true
                             }
-                            // Avoid multiple copies of the same destination when reselecting the same item
                             launchSingleTop = true
-                            // Restore state when reselecting a previously selected item
                             restoreState = true
                         }
                     }
@@ -341,13 +323,27 @@ fun currentRoute(navController: NavController): String? {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EventDetailsView(navController: NavController) {
+fun EventDetailsView(navController: NavController, eventId: String?) {
+    val context = LocalContext.current
+    var event by remember { mutableStateOf<Event?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    // Fetch event data from Firebase
+    LaunchedEffect(eventId) {
+        eventId?.let {
+            FirebaseService.fetchEventById(context, it) { fetchedEvent ->
+                event = fetchedEvent
+                isLoading = false
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Explore",
+                        text = event?.title ?: "Event Details",
                         style = MaterialTheme.typography.titleLarge
                     )
                 },
@@ -370,111 +366,155 @@ fun EventDetailsView(navController: NavController) {
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // Event Image
-            Image(
-                painter = painterResource(id = R.drawable.concert), // Replace with your actual image resource
-                contentDescription = "Event Image",
+        if (isLoading) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp),
-                contentScale = ContentScale.Crop
-            )
-
-            // Event Details in a Card with Border
-            Card(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
-                    .border(
-                        width = 1.dp,
-                        color = Color(0xFFE0E0E0), // Light gray border
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(8.dp)
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    // Event Title
-                    Text(
-                        text = "BU Student Composers Concert",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                CircularProgressIndicator()
+            }
+        } else if (event != null) {
+            val eventDetails = event!!
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                item {
+                    // Event Image
+                    if (eventDetails.photo.isNotEmpty()) {
+                        AsyncImage(
+                            model = eventDetails.photo, // Full image URL from Firebase Storage
+                            contentDescription = "Event Image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(240.dp)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(240.dp)
+                                .background(Color.Gray),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Image not available", color = Color.White)
+                        }
+                    }
+                }
+                item {
+                    // Event Details in a Card with Border
+                    Card(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .fillMaxWidth()
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFFE0E0E0),
+                                shape = RoundedCornerShape(8.dp)
+                            ),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            // Event Title
+                            Text(
+                                text = eventDetails.title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                    // Event Dates
-                    Text(
-                        text = "Nov 3, 2023 - Nov 5, 2023",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                            // Event Dates
+                            Text(
+                                text = "Date: ${eventDetails.startTime} - ${eventDetails.endTime}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                    // Event Description
-                    Text(
-                        text = "Description:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "This is a description of the BU Student Composers Concert. Enjoy an evening of beautiful compositions and performances by talented students.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        lineHeight = 20.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                            // Event Description
+                            Text(
+                                text = "Description:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = eventDetails.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                lineHeight = 20.sp
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                    // Event Hours
-                    Text(
-                        text = "Hours: 11:00am - 5:00pm",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Normal
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                            // Event Location
+                            Text(
+                                text = "Location:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = eventDetails.location,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                    // Event Link
-                    Text(
-                        text = "Link: Concert",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF3366CC),
-                        modifier = Modifier.clickable { /* Handle Link Click */ }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Event Location
-                    Text(
-                        text = "Location: 888 Commonwealth Ave, Boston, MA 00000",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                            // Event Link
+                            Text(
+                                text = "Learn More:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = eventDetails.eventUrl,
+                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.Blue, textDecoration = TextDecoration.Underline),
+                                modifier = Modifier.clickable {
+                                    // Handle URL click (e.g., open in browser)
+                                }
+                            )
+                        }
+                    }
+                }
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { /* Handle Register */ },
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCC0000))
+                    ) {
+                        Text(
+                            text = "Register",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
-
-            // Register Button
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = { /* Handle Register */ },
+        } else {
+            Box(
                 modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .fillMaxWidth()
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCC0000))
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Register",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("Event not found or failed to load.", style = MaterialTheme.typography.bodyLarge)
             }
         }
     }
 }
+
+
+
