@@ -41,7 +41,8 @@ private fun registerUser(email: String, password: String, firstName: String, las
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val userId = auth.currentUser?.uid
-                if (userId != null) {
+                val currentUser = auth.currentUser
+                if (userId != null && currentUser != null) {
                     val userMap = mapOf(
                         "firstName" to firstName,
                         "lastName" to lastName,
@@ -49,8 +50,14 @@ private fun registerUser(email: String, password: String, firstName: String, las
                     )
                     database.child("users").child(userId).setValue(userMap)
                         .addOnSuccessListener {
-                            Toast.makeText(navController.context, "Registration successful!", Toast.LENGTH_SHORT).show()
-                            navController.navigate("login")
+                            currentUser.sendEmailVerification()
+                                .addOnSuccessListener {
+                                    Toast.makeText(navController.context, "Verification email sent. Please verify your email before logging in.", Toast.LENGTH_LONG).show()
+                                    navController.navigate("login")
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(navController.context, "Failed to send verification email.", Toast.LENGTH_SHORT).show()
+                                }
                         }
                         .addOnFailureListener {
                             Toast.makeText(navController.context, "Failed to save user info.", Toast.LENGTH_SHORT).show()
@@ -62,6 +69,7 @@ private fun registerUser(email: String, password: String, firstName: String, las
             }
         }
 }
+
 
 
 

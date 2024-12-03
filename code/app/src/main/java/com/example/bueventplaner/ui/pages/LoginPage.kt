@@ -42,13 +42,20 @@ private fun authenticateUser(email: String, password: String, navController: Nav
     auth.signInWithEmailAndPassword(email, password)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Toast.makeText(navController.context, "Login successful!", Toast.LENGTH_SHORT).show()
-                navController.navigate("event_list")
+                val currentUser = auth.currentUser
+                if (currentUser?.isEmailVerified == true) {
+                    Toast.makeText(navController.context, "Login successful!", Toast.LENGTH_SHORT).show()
+                    navController.navigate("event_list")
+                } else {
+                    Toast.makeText(navController.context, "Please verify your email before logging in.", Toast.LENGTH_LONG).show()
+                    auth.signOut() // Sign out unverified users
+                }
             } else {
                 Toast.makeText(navController.context, "Login failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
             }
         }
 }
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,7 +65,7 @@ fun AuthPage(
     modifier: Modifier = Modifier,
     onLogin: (String, String) -> Unit,
 ) {
-    var email by remember { mutableStateOf("2@gmail.com") }
+    var email by remember { mutableStateOf("caoyc2022@gmail.com") }
     var password by remember { mutableStateOf("123456") }
     var rememberMe by remember { mutableStateOf(false) }
 
