@@ -32,14 +32,13 @@ import com.example.bueventplaner.services.FirebaseService
 import com.example.bueventplaner.services.FirebaseService.fetchUserFullName
 import com.example.bueventplaner.services.FirebaseService.updateProfileImageUrl
 import com.example.bueventplaner.services.FirebaseService.uploadImageToFirebase
-import com.example.bueventplaner.ui.viewmodels.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = viewModel()) {
+fun ProfilePage(navController: NavController) {
     var isEditing by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -47,17 +46,22 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
     var firstName by remember { mutableStateOf("Loading...") }
     var lastName by remember { mutableStateOf("Loading...") }
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val userSavedEvents = remember { mutableStateListOf<Event>() }
 
     // Fetch the user data using the fetchUserFullName function
     LaunchedEffect(Unit) {
         val currentUser = FirebaseAuth.getInstance().currentUser
-        currentUser?.let { user ->
+        currentUser?.let {
             fetchUserFullName { fetchedFirstName, fetchedLastName ->
                 firstName = fetchedFirstName
                 lastName = fetchedLastName
             }
+
+            FirebaseService.fetchUserSavedEvents(userSavedEvents)
         }
     }
+
+
 
     Scaffold(
         topBar = {
@@ -93,15 +97,15 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                ProfileHeader(viewModel = viewModel, isEditing = isEditing, firstName = firstName, lastName = lastName, photoPath = "profilePics/${userId}.jpg")
-                TabSection(navController, viewModel = viewModel)
+                ProfileHeader(isEditing = isEditing, firstName = firstName, lastName = lastName, photoPath = "profilePics/${userId}.jpg")
+                TabSection(navController, userSavedEvents)
             }
         }
     )
 }
 
 @Composable
-fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: String, lastName: String, photoPath: String) {
+fun ProfileHeader(isEditing: Boolean, firstName: String, lastName: String, photoPath: String) {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val userId = currentUser?.uid ?: ""
     val coroutineScope = rememberCoroutineScope()
@@ -191,7 +195,7 @@ fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: St
 
 
 @Composable
-fun TabSection(navController: NavController, viewModel: ProfileViewModel) {
+fun TabSection(navController: NavController, userSavedEvents: MutableList<Event>) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column {
@@ -212,8 +216,8 @@ fun TabSection(navController: NavController, viewModel: ProfileViewModel) {
         }
 
         when (selectedTab) {
-            0 -> EventList(navController, events = viewModel.attendedEvents)
-            1 -> EventList(navController, events = viewModel.userSavedEvents)
+            0 -> EventList(navController, events = userSavedEvents)
+            1 -> EventList(navController, events = userSavedEvents)
         }
     }
 }
