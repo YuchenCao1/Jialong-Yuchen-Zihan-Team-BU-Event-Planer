@@ -134,6 +134,7 @@ fun ProfileHeader(
     val coroutineScope = rememberCoroutineScope()
     var firstName by remember { mutableStateOf(updatedFirstName) }
     var lastName by remember { mutableStateOf(updatedLastName) }
+    var profileImageUrl by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         val storageReference = FirebaseStorage.getInstance().reference
@@ -178,14 +179,23 @@ fun ProfileHeader(
                 .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
                 .clickable { launcher.launch("image/*") } // Open file picker
         ) {
-            AsyncImage(
-                model = "profilePics/${FirebaseAuth.getInstance().currentUser?.uid}.jpg",
-                contentDescription = "Profile Picture",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp)
-            )
+            if (profileImageUrl != null) {
+                AsyncImage(
+                    model = profileImageUrl,
+                    contentDescription = "Profile Picture",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = "Default Profile Picture",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
