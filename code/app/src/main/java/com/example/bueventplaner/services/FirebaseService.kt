@@ -84,11 +84,10 @@ object FirebaseService {
         }
 
         val userId = currentUser.uid
-        val userSavedEventsRef = Firebase.database.reference
-            .child("users")
-            .child(userId)
-            .child("savedEvents")
+        val database = Firebase.database.reference
 
+        // Add event to user's savedEvents
+        val userSavedEventsRef = database.child("users").child(userId).child("savedEvents")
         userSavedEventsRef.get().addOnSuccessListener { snapshot ->
             val savedEvents = snapshot.getValue() as? List<String> ?: emptyList()
             val updatedSavedEvents = savedEvents.toMutableList().apply {
@@ -96,13 +95,20 @@ object FirebaseService {
             }
 
             userSavedEventsRef.setValue(updatedSavedEvents).addOnSuccessListener {
-                callback(true)
-            }.addOnFailureListener {
-                callback(false)
-            }
-        }.addOnFailureListener {
-            callback(false)
-        }
+                // Add user to event's savedUsers
+                val eventSavedUsersRef = database.child("events").child(eventId).child("savedUsers")
+                eventSavedUsersRef.get().addOnSuccessListener { eventSnapshot ->
+                    val savedUsers = eventSnapshot.getValue() as? List<String> ?: emptyList()
+                    val updatedSavedUsers = savedUsers.toMutableList().apply {
+                        if (!contains(userId)) add(userId)
+                    }
+
+                    eventSavedUsersRef.setValue(updatedSavedUsers).addOnSuccessListener {
+                        callback(true)
+                    }.addOnFailureListener { callback(false) }
+                }.addOnFailureListener { callback(false) }
+            }.addOnFailureListener { callback(false) }
+        }.addOnFailureListener { callback(false) }
     }
 
     fun unregisterEventForUser(eventId: String, callback: (Boolean) -> Unit) {
@@ -113,11 +119,10 @@ object FirebaseService {
         }
 
         val userId = currentUser.uid
-        val userSavedEventsRef = Firebase.database.reference
-            .child("users")
-            .child(userId)
-            .child("savedEvents")
+        val database = Firebase.database.reference
 
+        // Remove event from user's savedEvents
+        val userSavedEventsRef = database.child("users").child(userId).child("savedEvents")
         userSavedEventsRef.get().addOnSuccessListener { snapshot ->
             val savedEvents = snapshot.getValue() as? List<String> ?: emptyList()
             val updatedSavedEvents = savedEvents.toMutableList().apply {
@@ -125,12 +130,20 @@ object FirebaseService {
             }
 
             userSavedEventsRef.setValue(updatedSavedEvents).addOnSuccessListener {
-                callback(true)
-            }.addOnFailureListener {
-                callback(false)
-            }
-        }.addOnFailureListener {
-            callback(false)
-        }
+                // Remove user from event's savedUsers
+                val eventSavedUsersRef = database.child("events").child(eventId).child("savedUsers")
+                eventSavedUsersRef.get().addOnSuccessListener { eventSnapshot ->
+                    val savedUsers = eventSnapshot.getValue() as? List<String> ?: emptyList()
+                    val updatedSavedUsers = savedUsers.toMutableList().apply {
+                        remove(userId)
+                    }
+
+                    eventSavedUsersRef.setValue(updatedSavedUsers).addOnSuccessListener {
+                        callback(true)
+                    }.addOnFailureListener { callback(false) }
+                }.addOnFailureListener { callback(false) }
+            }.addOnFailureListener { callback(false) }
+        }.addOnFailureListener { callback(false) }
     }
+
 }

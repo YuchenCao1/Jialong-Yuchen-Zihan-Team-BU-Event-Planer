@@ -58,7 +58,7 @@ fun AuthPage(
     modifier: Modifier = Modifier,
     onLogin: (String, String) -> Unit,
 ) {
-    var email by remember { mutableStateOf("1@gmail.com") }
+    var email by remember { mutableStateOf("2@gmail.com") }
     var password by remember { mutableStateOf("123456") }
     var rememberMe by remember { mutableStateOf(false) }
 

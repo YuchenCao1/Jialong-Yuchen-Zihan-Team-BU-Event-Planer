@@ -9,5 +9,5 @@ data class Event(
     val location: String = "",
     val startTime: String = "",
     val endTime: String = "",
-    val savedUsers: List<User> = emptyList()
+    val savedUsers: List<String> = emptyList()
 )
