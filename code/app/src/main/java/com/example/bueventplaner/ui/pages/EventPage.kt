@@ -44,19 +44,37 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.ktx.database
+import android.content.Intent
+import android.net.Uri
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun EventListPage(navController: NavController) {
     val context = LocalContext.current
-    var events by remember { mutableStateOf<List<Event>>(emptyList()) }
+    var allEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
+    var filteredEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         FirebaseService.fetchEvents(context) { fetchedEvents ->
-            events = fetchedEvents
+            allEvents = fetchedEvents
+            filteredEvents = fetchedEvents
             isLoading = false
+        }
+    }
+
+    // Update filteredEvents whenever searchQuery changes
+    LaunchedEffect(searchQuery) {
+        filteredEvents = if (searchQuery.isEmpty()) {
+            allEvents
+        } else {
+            allEvents.filter { event ->
+                event.title.contains(searchQuery, ignoreCase = true) ||
+                        event.description.contains(searchQuery, ignoreCase = true) ||
+                        event.location.contains(searchQuery, ignoreCase = true)
+            }
         }
     }
 
@@ -83,7 +101,6 @@ fun EventListPage(navController: NavController) {
                 .background(color = Color.White)
         ) {
             // Search Bar
-            var searchQuery by remember { mutableStateOf("") }
             TextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -105,42 +122,60 @@ fun EventListPage(navController: NavController) {
                     CircularProgressIndicator()
                 }
             } else {
-                // Featured Events Slider
-                Spacer(modifier = Modifier.height(16.dp))
-                ImageSlider(
-                    events = events.take(4),
-                    onClick = { eventId ->
-                        navController.navigate("event_details/$eventId")
-                    }
-                )
-                // Recommended Events
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Recommended For You",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                if (searchQuery.isEmpty()) {
+                    // Show ImageSlider when no search query
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ImageSlider(
+                        events = filteredEvents.take(4),
+                        onClick = { eventId ->
+                            navController.navigate("event_details/$eventId")
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Recommended For You",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+
+                // Always show filtered events
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = 16.dp)
                 ) {
-                    items(events) { event ->
-                        EventCard(
-                            title = event.title,
-                            date = "${event.startTime} - ${event.endTime}",
-                            location = event.location,
-                            photoPath = event.photo,
-                            onClick = {
-                                navController.navigate("event_details/${event.id}")
+                    if (filteredEvents.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(top = 50.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No events found.", style = MaterialTheme.typography.bodyMedium)
                             }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    } else {
+                        items(filteredEvents) { event ->
+                            EventCard(
+                                title = event.title,
+                                date = "${event.startTime} - ${event.endTime}",
+                                location = event.location,
+                                photoPath = event.photo,
+                                onClick = {
+                                    navController.navigate("event_details/${event.id}")
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
                 }
             }
         }
     }
 }
+
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -495,7 +530,15 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
                                 text = eventDetails.eventUrl,
                                 style = MaterialTheme.typography.bodyMedium.copy(color = Color.Blue, textDecoration = TextDecoration.Underline),
                                 modifier = Modifier.clickable {
-                                    // Handle URL click (e.g., open in browser)
+                                    val url = eventDetails.eventUrl
+                                    if (url.isNotEmpty() && Uri.parse(url).isAbsolute) {
+                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                            data = Uri.parse(url)
+                                        }
+                                        context.startActivity(intent)
+                                    } else {
+                                        Toast.makeText(context, "Invalid URL", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             )
                         }
