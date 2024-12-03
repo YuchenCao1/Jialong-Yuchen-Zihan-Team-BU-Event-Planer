@@ -232,5 +232,51 @@ object FirebaseService {
                 onResult(false)
             }
     }
+    
+    fun fetchUserSavedEvents(userSavedEvents: MutableList<Event>) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            return
+        }
+
+        val userId = currentUser.uid
+        val database = FirebaseDatabase.getInstance().reference
+        val storage = FirebaseStorage.getInstance().reference
+
+        database.child("users").child(userId).child("savedEvents").get()
+            .addOnSuccessListener { snapshot ->
+                val savedEventIds = snapshot.getValue() as? List<String> ?: emptyList()
+                if (savedEventIds.isEmpty()) {
+                    return@addOnSuccessListener
+                }
+
+                savedEventIds.forEach { eventId ->
+                    database.child("events").child(eventId).get()
+                        .addOnSuccessListener { eventSnapshot ->
+                            val event = eventSnapshot.getValue(Event::class.java)
+                            if (event != null) {
+                                if (!event.photo.startsWith("http")) {
+                                    val storageRef = storage.child(event.photo)
+                                    storageRef.downloadUrl
+                                        .addOnSuccessListener { url ->
+                                            userSavedEvents.add(event.copy(photo = url.toString()))
+                                        }
+                                        .addOnFailureListener {
+                                            println("Failed to fetch download URL for ${event.photo}")
+                                        }
+                                } else {
+                                    userSavedEvents.add(event)
+                                }
+                            }
+                        }
+                        .addOnFailureListener {
+                            println("Failed to fetch event: ${it.message}")
+                        }
+                }
+            }
+            .addOnFailureListener {
+                println("Failed to fetch saved events: ${it.message}")
+            }
+    }
 
 }

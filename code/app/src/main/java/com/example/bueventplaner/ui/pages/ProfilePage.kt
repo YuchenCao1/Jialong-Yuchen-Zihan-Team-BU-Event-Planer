@@ -32,26 +32,33 @@ import com.example.bueventplaner.services.FirebaseService
 import com.example.bueventplaner.services.FirebaseService.fetchUserFullName
 import com.example.bueventplaner.services.FirebaseService.updateProfileImageUrl
 import com.example.bueventplaner.services.FirebaseService.uploadImageToFirebase
-import com.example.bueventplaner.ui.viewmodels.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = viewModel()) {
+fun ProfilePage(navController: NavController) {
     var isEditing by remember { mutableStateOf(false) }
     var firstName by remember { mutableStateOf("Loading...") }
     var lastName by remember { mutableStateOf("Loading...") }
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    val userSavedEvents = remember { mutableStateListOf<Event>() }
 
     // Fetch the user data using the fetchUserFullName function
     LaunchedEffect(Unit) {
-        fetchUserFullName { fetchedFirstName, fetchedLastName ->
-            firstName = fetchedFirstName
-            lastName = fetchedLastName
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        currentUser?.let {
+            fetchUserFullName { fetchedFirstName, fetchedLastName ->
+                firstName = fetchedFirstName
+                lastName = fetchedLastName
+            }
+
+            FirebaseService.fetchUserSavedEvents(userSavedEvents)
         }
     }
+
+
 
     Scaffold(
         topBar = {
@@ -107,7 +114,7 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
                     },
                     onEditModeChange = { isEditing = it }
                 )
-                TabSection(navController = navController, viewModel = viewModel)
+                TabSection(navController, userSavedEvents)
             }
         }
     )
@@ -122,10 +129,25 @@ fun ProfileHeader(
     onSaveChanges: (String, String) -> Unit,
     onEditModeChange: (Boolean) -> Unit // New parameter for editing state control
 ) {
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val userId = currentUser?.uid ?: ""
     val coroutineScope = rememberCoroutineScope()
     var firstName by remember { mutableStateOf(updatedFirstName) }
     var lastName by remember { mutableStateOf(updatedLastName) }
 
+    LaunchedEffect(Unit) {
+        val storageReference = FirebaseStorage.getInstance().reference
+        val filePath = "profilePics/${userId}.jpg"
+        storageReference.child(filePath).downloadUrl
+            .addOnSuccessListener { url ->
+                profileImageUrl = url.toString()
+            }
+            .addOnFailureListener { e ->
+                println("Failed to fetch profile image URL: ${e.message}")
+                profileImageUrl = null
+            }
+    }
+    
     // Update local state when fetched data changes
     LaunchedEffect(updatedFirstName, updatedLastName) {
         firstName = updatedFirstName
@@ -204,7 +226,7 @@ fun ProfileHeader(
 
 
 @Composable
-fun TabSection(navController: NavController, viewModel: ProfileViewModel) {
+fun TabSection(navController: NavController, userSavedEvents: MutableList<Event>) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column {
@@ -225,8 +247,8 @@ fun TabSection(navController: NavController, viewModel: ProfileViewModel) {
         }
 
         when (selectedTab) {
-            0 -> EventList(navController, events = viewModel.attendedEvents)
-            1 -> EventList(navController, events = viewModel.userSavedEvents)
+            0 -> EventList(navController, events = userSavedEvents)
+            1 -> EventList(navController, events = userSavedEvents)
         }
     }
 }
