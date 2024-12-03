@@ -37,6 +37,7 @@ import coil.compose.AsyncImage
 import com.example.bueventplaner.R
 import com.example.bueventplaner.services.FirebaseService
 import com.example.bueventplaner.data.model.Event
+import com.example.bueventplaner.ui.component.EventCard
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalContext
@@ -269,52 +270,6 @@ fun CustomDotIndicator(
                     .background(color)
                     .padding(dotSpacing)
             )
-        }
-    }
-}
-
-@Composable
-fun EventCard(
-    title: String,
-    date: String,
-    location: String,
-    photoPath: String,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            if (photoPath.isNotEmpty()) {
-                AsyncImage(
-                    model = photoPath,
-                    contentDescription = "Event Image",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp)
-                        .background(Color.Gray),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Loading...", style = MaterialTheme.typography.bodySmall, color = Color.White)
-                }
-            }
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium)
-                Text(text = date, style = MaterialTheme.typography.bodySmall)
-                Text(text = location, style = MaterialTheme.typography.bodySmall)
-            }
         }
     }
 }

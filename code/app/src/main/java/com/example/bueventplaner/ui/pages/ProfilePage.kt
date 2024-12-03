@@ -26,6 +26,7 @@ import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.bueventplaner.R
 import com.example.bueventplaner.data.model.Event
+import com.example.bueventplaner.ui.component.EventCard
 import com.example.bueventplaner.services.FirebaseService
 import com.example.bueventplaner.services.FirebaseService.fetchUserFullName
 import com.example.bueventplaner.services.FirebaseService.updateProfileImageUrl
@@ -91,7 +92,7 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
                     .padding(padding)
             ) {
                 ProfileHeader(viewModel = viewModel, isEditing = isEditing, firstName = firstName, lastName = lastName, photoPath = "profilePics/${userId}.jpg")
-                TabSection(viewModel = viewModel)
+                TabSection(navController, viewModel = viewModel)
             }
         }
     )
@@ -160,7 +161,7 @@ fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: St
 }
 
 @Composable
-fun TabSection(viewModel: ProfileViewModel) {
+fun TabSection(navController: NavController, viewModel: ProfileViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column {
@@ -181,14 +182,14 @@ fun TabSection(viewModel: ProfileViewModel) {
         }
 
         when (selectedTab) {
-            0 -> EventList(events = viewModel.attendedEvents)
-            1 -> EventList(events = viewModel.userSavedEvents)
+            0 -> EventList(navController, events = viewModel.attendedEvents)
+            1 -> EventList(navController, events = viewModel.userSavedEvents)
         }
     }
 }
 
 @Composable
-fun EventList(events: List<Event>) {
+fun EventList(navController: NavController, events: List<Event>) {
     if (events.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -199,25 +200,19 @@ fun EventList(events: List<Event>) {
     } else {
         LazyColumn(contentPadding = PaddingValues(16.dp)) {
             items(events) { event ->
-                EventCard(event = event)
+                EventCard(
+                    title = event.title,
+                    date = "${event.startTime} - ${event.endTime}",
+                    location = event.location,
+                    photoPath = event.photo,
+                    onClick = {
+                        navController.navigate("event_details/${event.id}")
+                    }
+                )
             }
         }
     }
 }
 
-@Composable
-fun EventCard(event: Event) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = event.title, style = MaterialTheme.typography.titleMedium)
-            Text(text = event.description, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
 
 
