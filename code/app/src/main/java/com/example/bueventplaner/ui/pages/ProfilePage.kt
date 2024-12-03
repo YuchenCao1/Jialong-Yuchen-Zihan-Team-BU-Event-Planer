@@ -41,17 +41,15 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = viewModel()) {
     var isEditing by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-
-    // Variables to hold the updated names
-    var updatedFirstName by remember { mutableStateOf("Loading...") }
-    var updatedLastName by remember { mutableStateOf("Loading...") }
+    var firstName by remember { mutableStateOf("Loading...") }
+    var lastName by remember { mutableStateOf("Loading...") }
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     // Fetch the user data using the fetchUserFullName function
     LaunchedEffect(Unit) {
         fetchUserFullName { fetchedFirstName, fetchedLastName ->
-            updatedFirstName = fetchedFirstName
-            updatedLastName = fetchedLastName
+            firstName = fetchedFirstName
+            lastName = fetchedLastName
         }
     }
 
@@ -61,13 +59,15 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
                 title = { Text(text = "Personal Homepage", fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigate("event_list") }) {
-                        Icon(painter = painterResource(id = R.drawable.ic_back), contentDescription = "Back", modifier = Modifier.size(24.dp))
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_back),
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        isEditing = !isEditing
-                    }) {
+                    IconButton(onClick = { isEditing = !isEditing }) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_settings),
                             contentDescription = "Edit",
@@ -78,7 +78,11 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
                         FirebaseAuth.getInstance().signOut()
                         navController.navigate("login")
                     }) {
-                        Icon(painter = painterResource(id = R.drawable.ic_logout), contentDescription = "Logout", modifier = Modifier.size(24.dp))
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_logout),
+                            contentDescription = "Logout",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             )
@@ -91,33 +95,43 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
             ) {
                 ProfileHeader(
                     isEditing = isEditing,
-                    updatedFirstName = updatedFirstName,
-                    updatedLastName = updatedLastName,
+                    updatedFirstName = firstName,
+                    updatedLastName = lastName,
                     onSaveChanges = { newFirstName, newLastName ->
                         FirebaseService.updateUserName(newFirstName, newLastName) { success ->
                             if (success) {
-                                updatedFirstName = newFirstName
-                                updatedLastName = newLastName
+                                firstName = newFirstName
+                                lastName = newLastName
                             }
                         }
-                    }
+                    },
+                    onEditModeChange = { isEditing = it }
                 )
-                TabSection(navController, viewModel = viewModel)
+                TabSection(navController = navController, viewModel = viewModel)
             }
         }
     )
 }
+
 
 @Composable
 fun ProfileHeader(
     isEditing: Boolean,
     updatedFirstName: String,
     updatedLastName: String,
-    onSaveChanges: (String, String) -> Unit
+    onSaveChanges: (String, String) -> Unit,
+    onEditModeChange: (Boolean) -> Unit // New parameter for editing state control
 ) {
     val coroutineScope = rememberCoroutineScope()
     var firstName by remember { mutableStateOf(updatedFirstName) }
     var lastName by remember { mutableStateOf(updatedLastName) }
+
+    // Update local state when fetched data changes
+    LaunchedEffect(updatedFirstName, updatedLastName) {
+        firstName = updatedFirstName
+        lastName = updatedLastName
+    }
+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             coroutineScope.launch {
@@ -140,13 +154,15 @@ fun ProfileHeader(
             modifier = Modifier
                 .size(100.dp)
                 .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
-                .clickable { launcher.launch("image/*") }
+                .clickable { launcher.launch("image/*") } // Open file picker
         ) {
             AsyncImage(
                 model = "profilePics/${FirebaseAuth.getInstance().currentUser?.uid}.jpg",
                 contentDescription = "Profile Picture",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().height(240.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp)
             )
         }
 
@@ -167,6 +183,7 @@ fun ProfileHeader(
             Button(
                 onClick = {
                     onSaveChanges(firstName, lastName)
+                    onEditModeChange(false) // Exit editing mode after saving
                 },
                 modifier = Modifier.padding(top = 8.dp)
             ) {
@@ -181,6 +198,8 @@ fun ProfileHeader(
         }
     }
 }
+
+
 
 
 
