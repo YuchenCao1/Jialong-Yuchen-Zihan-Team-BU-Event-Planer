@@ -58,8 +58,8 @@ fun AuthPage(
     modifier: Modifier = Modifier,
     onLogin: (String, String) -> Unit,
 ) {
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("1@gmail.com") }
+    var password by remember { mutableStateOf("123456") }
     var rememberMe by remember { mutableStateOf(false) }
 
     Column(
@@ -88,8 +88,8 @@ fun AuthPage(
 
                 // Email
                 TextField(
-                    value = username,
-                    onValueChange = { username = it },
+                    value = email,
+                    onValueChange = { email = it },
                     label = { Text("Account") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.textFieldColors(
@@ -136,7 +136,7 @@ fun AuthPage(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = { onLogin(username, password) },
+                    onClick = { onLogin(email, password) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
