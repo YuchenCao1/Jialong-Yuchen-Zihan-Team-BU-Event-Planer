@@ -186,7 +186,7 @@ fun ProfileHeader(
                 )
             } else {
                 Image(
-                    painter = painterResource(id = R.drawable.logo),
+                    painter = painterResource(id = R.drawable.school),
                     contentDescription = "Default Profile Picture",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()

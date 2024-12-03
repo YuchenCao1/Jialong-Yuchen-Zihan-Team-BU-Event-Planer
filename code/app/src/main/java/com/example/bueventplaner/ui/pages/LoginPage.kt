@@ -19,7 +19,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
-import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.android.gms.common.api.ApiException
@@ -28,7 +27,6 @@ import com.google.android.gms.common.api.ApiException
 
 @Composable
 fun LoginPage(navController: NavController) {
-    val auth = FirebaseAuth.getInstance()
     val context = LocalContext.current
 
     // Configure Google Sign-In
