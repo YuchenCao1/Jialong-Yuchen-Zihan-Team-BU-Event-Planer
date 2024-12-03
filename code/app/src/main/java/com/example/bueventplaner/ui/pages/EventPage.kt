@@ -45,7 +45,7 @@ fun EventListPage(navController: NavController) {
             TopAppBar(
                 title = { Text("Explore", style = MaterialTheme.typography.titleLarge) },
                 actions = {
-                    IconButton(onClick = { /* Profile Action */ }) {
+                    IconButton(onClick = { navController.navigate("profile") }) {
                         Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
                     }
                 }
