@@ -39,7 +39,6 @@ fun ProfilePage(navController: NavController) {
     var isEditing by remember { mutableStateOf(false) }
     var firstName by remember { mutableStateOf("Loading...") }
     var lastName by remember { mutableStateOf("Loading...") }
-    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     val userSavedEvents = remember { mutableStateListOf<Event>() }
 
     // Fetch the user data using the fetchUserFullName function

@@ -4,7 +4,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,10 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
@@ -34,7 +31,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
 import coil.compose.AsyncImage
-import com.example.bueventplaner.R
 import com.example.bueventplaner.services.FirebaseService
 import com.example.bueventplaner.data.model.Event
 import com.example.bueventplaner.ui.component.EventCard
@@ -42,14 +38,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.ktx.storage
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.ktx.database
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventListPage(navController: NavController) {
     val context = LocalContext.current
@@ -181,7 +177,7 @@ fun EventListPage(navController: NavController) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ImageSlider(events: List<Event>, onClick: (String) -> Unit) {
-    val pagerState = rememberPagerState(0, 0f, { events.size })
+    val pagerState = rememberPagerState(0, 0f) { events.size }
 
     Box(
         modifier = Modifier
@@ -256,10 +252,10 @@ fun CustomDotIndicator(
         for (i in 0 until pageCount) {
             val isSelected = currentPage == i
             val color by animateColorAsState(
-                targetValue = if (isSelected) activeColor else inactiveColor
+                targetValue = if (isSelected) activeColor else inactiveColor, label = ""
             )
             val scale by animateFloatAsState(
-                targetValue = if (isSelected) activeScale else 1f
+                targetValue = if (isSelected) activeScale else 1f, label = ""
             )
 
             Box(
@@ -324,7 +320,7 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
 
     // Fetch event details and check registration status
     LaunchedEffect(eventId) {
-        eventId?.let {
+        eventId?.let { it ->
             FirebaseService.fetchEventById(context, it) { fetchedEvent ->
                 event = fetchedEvent
                 isLoading = false
@@ -335,7 +331,7 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
                     val userRef = Firebase.database.reference.child("users").child(userId)
                     userRef.child("savedEvents").get().addOnSuccessListener { snapshot ->
                         // Use explicit type casting to avoid type inference issues
-                        val savedEvents = snapshot.getValue() as? List<String> ?: emptyList()
+                        val savedEvents = snapshot.value as? List<String> ?: emptyList()
                         isRegistered = eventId in savedEvents
                     }.addOnFailureListener {
                         println("Failed to fetch saved events: ${it.message}")
@@ -357,7 +353,7 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
                         )
                     }

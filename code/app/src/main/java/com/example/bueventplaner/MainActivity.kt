@@ -7,7 +7,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.navigation.compose.rememberNavController
 import com.example.bueventplaner.ui.navigation.NavGraph
-import com.example.bueventplaner.ui.theme.BUEventPlanerTheme
 import androidx.compose.runtime.Composable
 
 

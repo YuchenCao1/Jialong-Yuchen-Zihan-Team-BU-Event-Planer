@@ -9,7 +9,6 @@ import android.net.Uri
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.ktx.storage
-import com.google.firebase.database.GenericTypeIndicator
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 
@@ -92,7 +91,7 @@ object FirebaseService {
         // Add event to user's savedEvents
         val userSavedEventsRef = database.child("users").child(userId).child("savedEvents")
         userSavedEventsRef.get().addOnSuccessListener { snapshot ->
-            val savedEvents = snapshot.getValue() as? List<String> ?: emptyList()
+            val savedEvents = snapshot.value as? List<String> ?: emptyList()
             val updatedSavedEvents = savedEvents.toMutableList().apply {
                 if (!contains(eventId)) add(eventId)
             }
@@ -101,7 +100,7 @@ object FirebaseService {
                 // Add user to event's savedUsers
                 val eventSavedUsersRef = database.child("events").child(eventId).child("savedUsers")
                 eventSavedUsersRef.get().addOnSuccessListener { eventSnapshot ->
-                    val savedUsers = eventSnapshot.getValue() as? List<String> ?: emptyList()
+                    val savedUsers = eventSnapshot.value as? List<String> ?: emptyList()
                     val updatedSavedUsers = savedUsers.toMutableList().apply {
                         if (!contains(userId)) add(userId)
                     }
@@ -152,7 +151,7 @@ object FirebaseService {
         // Remove event from user's savedEvents
         val userSavedEventsRef = database.child("users").child(userId).child("savedEvents")
         userSavedEventsRef.get().addOnSuccessListener { snapshot ->
-            val savedEvents = snapshot.getValue() as? List<String> ?: emptyList()
+            val savedEvents = snapshot.value as? List<String> ?: emptyList()
             val updatedSavedEvents = savedEvents.toMutableList().apply {
                 remove(eventId)
             }
@@ -161,7 +160,7 @@ object FirebaseService {
                 // Remove user from event's savedUsers
                 val eventSavedUsersRef = database.child("events").child(eventId).child("savedUsers")
                 eventSavedUsersRef.get().addOnSuccessListener { eventSnapshot ->
-                    val savedUsers = eventSnapshot.getValue() as? List<String> ?: emptyList()
+                    val savedUsers = eventSnapshot.value as? List<String> ?: emptyList()
                     val updatedSavedUsers = savedUsers.toMutableList().apply {
                         remove(userId)
                     }
@@ -234,10 +233,7 @@ object FirebaseService {
     }
     
     fun fetchUserSavedEvents(userSavedEvents: MutableList<Event>) {
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        if (currentUser == null) {
-            return
-        }
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
 
         val userId = currentUser.uid
         val database = FirebaseDatabase.getInstance().reference
@@ -245,7 +241,7 @@ object FirebaseService {
 
         database.child("users").child(userId).child("savedEvents").get()
             .addOnSuccessListener { snapshot ->
-                val savedEventIds = snapshot.getValue() as? List<String> ?: emptyList()
+                val savedEventIds = snapshot.value as? List<String> ?: emptyList()
                 if (savedEventIds.isEmpty()) {
                     return@addOnSuccessListener
                 }
