@@ -557,4 +557,3 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
 
 
 
-
