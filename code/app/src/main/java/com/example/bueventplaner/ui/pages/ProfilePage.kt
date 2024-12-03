@@ -42,20 +42,16 @@ import kotlinx.coroutines.launch
 fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = viewModel()) {
     var isEditing by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    var firstName by remember { mutableStateOf(" ") }
-    var lastName by remember { mutableStateOf(" ") }
-    // Variables to hold fetched user data
 
-    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+    // Variables to hold the updated names
+    var updatedFirstName by remember { mutableStateOf("Loading...") }
+    var updatedLastName by remember { mutableStateOf("Loading...") }
 
     // Fetch the user data using the fetchUserFullName function
     LaunchedEffect(Unit) {
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        currentUser?.let { user ->
-            fetchUserFullName { fetchedFirstName, fetchedLastName ->
-                firstName = fetchedFirstName
-                lastName = fetchedLastName
-            }
+        fetchUserFullName { fetchedFirstName, fetchedLastName ->
+            updatedFirstName = fetchedFirstName
+            updatedLastName = fetchedLastName
         }
     }
 
@@ -93,7 +89,19 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                ProfileHeader(viewModel = viewModel, isEditing = isEditing, firstName = firstName, lastName = lastName, photoPath = "profilePics/${userId}.jpg")
+                ProfileHeader(
+                    isEditing = isEditing,
+                    updatedFirstName = updatedFirstName,
+                    updatedLastName = updatedLastName,
+                    onSaveChanges = { newFirstName, newLastName ->
+                        FirebaseService.updateUserName(newFirstName, newLastName) { success ->
+                            if (success) {
+                                updatedFirstName = newFirstName
+                                updatedLastName = newLastName
+                            }
+                        }
+                    }
+                )
                 TabSection(navController, viewModel = viewModel)
             }
         }
@@ -101,33 +109,21 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
 }
 
 @Composable
-fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: String, lastName: String, photoPath: String) {
-    val currentUser = FirebaseAuth.getInstance().currentUser
-    val userId = currentUser?.uid ?: ""
+fun ProfileHeader(
+    isEditing: Boolean,
+    updatedFirstName: String,
+    updatedLastName: String,
+    onSaveChanges: (String, String) -> Unit
+) {
     val coroutineScope = rememberCoroutineScope()
-    var profileImageUrl by remember { mutableStateOf<String?>(null) }
-
-    // Fetch the profile image URL from Firebase
-    LaunchedEffect(Unit) {
-        val storageReference = FirebaseStorage.getInstance().reference
-        val filePath = "profilePics/${userId}.jpg"
-        storageReference.child(filePath).downloadUrl
-            .addOnSuccessListener { url ->
-                profileImageUrl = url.toString()
-            }
-            .addOnFailureListener { e ->
-                println("Failed to fetch profile image URL: ${e.message}")
-                profileImageUrl = null
-            }
-    }
-
+    var firstName by remember { mutableStateOf(updatedFirstName) }
+    var lastName by remember { mutableStateOf(updatedLastName) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             coroutineScope.launch {
                 uploadImageToFirebase(it) { downloadUrl ->
                     if (downloadUrl != null) {
                         updateProfileImageUrl(downloadUrl)
-                        profileImageUrl = downloadUrl // Update the state with the new URL
                     }
                 }
             }
@@ -146,49 +142,31 @@ fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: St
                 .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
                 .clickable { launcher.launch("image/*") }
         ) {
-            if (profileImageUrl != null) {
-                AsyncImage(
-                    model = profileImageUrl,
-                    contentDescription = "Profile Picture",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                )
-            } else {
-                // Placeholder while loading or on error
-                Image(
-                    painter = painterResource(id = R.drawable.logo),
-                    contentDescription = "Default Profile Picture",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            AsyncImage(
+                model = "profilePics/${FirebaseAuth.getInstance().currentUser?.uid}.jpg",
+                contentDescription = "Profile Picture",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().height(240.dp)
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         if (isEditing) {
             TextField(
-                value = updatedFirstName,
-                onValueChange = { updatedFirstName = it },
+                value = firstName,
+                onValueChange = { firstName = it },
                 label = { Text("First Name") }
             )
             TextField(
-                value = updatedLastName,
-                onValueChange = { updatedLastName = it },
+                value = lastName,
+                onValueChange = { lastName = it },
                 label = { Text("Last Name") }
             )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-                    FirebaseService.updateUserName(updatedFirstName, updatedLastName) { success ->
-                        if (success) {
-                            // Optionally show a success message
-                        } else {
-                            // Optionally show a failure message
-                        }
-                    }
+                    onSaveChanges(firstName, lastName)
                 },
                 modifier = Modifier.padding(top = 8.dp)
             ) {
@@ -203,6 +181,7 @@ fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: St
         }
     }
 }
+
 
 
 @Composable
