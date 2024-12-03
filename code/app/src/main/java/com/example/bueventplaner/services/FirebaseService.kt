@@ -209,4 +209,28 @@ object FirebaseService {
         }
     }
 
+    fun updateUserName(firstName: String, lastName: String, onResult: (Boolean) -> Unit) {
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            onResult(false)
+            return
+        }
+
+        val userId = currentUser.uid
+        val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
+
+        val updates = mapOf(
+            "firstName" to firstName,
+            "lastName" to lastName
+        )
+
+        userRef.updateChildren(updates)
+            .addOnSuccessListener {
+                onResult(true)
+            }
+            .addOnFailureListener {
+                onResult(false)
+            }
+    }
+
 }

@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.example.bueventplaner" />
+                  <option name="mobileSdkAppId" value="1:945279445306:android:c569a3cb7b0b0a131b0803" />
+                  <option name="projectId" value="final-project-fb668" />
+                  <option name="projectNumber" value="945279445306" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

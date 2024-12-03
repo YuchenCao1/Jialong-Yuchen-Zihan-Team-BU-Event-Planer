@@ -40,10 +40,10 @@ import kotlinx.coroutines.launch
 fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = viewModel()) {
     var isEditing by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-
+    var firstName by remember { mutableStateOf(" ") }
+    var lastName by remember { mutableStateOf(" ") }
     // Variables to hold fetched user data
-    var firstName by remember { mutableStateOf("Loading...") }
-    var lastName by remember { mutableStateOf("Loading...") }
+
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     // Fetch the user data using the fetchUserFullName function
@@ -100,9 +100,9 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
 
 @Composable
 fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: String, lastName: String, photoPath: String) {
-    val currentUser = FirebaseAuth.getInstance().currentUser
-    val userId = currentUser?.uid ?: ""
     val coroutineScope = rememberCoroutineScope()
+    var updatedFirstName by remember { mutableStateOf(firstName) }
+    var updatedLastName by remember { mutableStateOf(lastName) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             coroutineScope.launch {
@@ -141,15 +141,30 @@ fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: St
 
         if (isEditing) {
             TextField(
-                value = firstName,
-                onValueChange = { /* Handle firstName editing */ },
+                value = updatedFirstName,
+                onValueChange = { updatedFirstName = it },
                 label = { Text("First Name") }
             )
             TextField(
-                value = lastName,
-                onValueChange = { /* Handle lastName editing */ },
+                value = updatedLastName,
+                onValueChange = { updatedLastName = it },
                 label = { Text("Last Name") }
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    FirebaseService.updateUserName(updatedFirstName, updatedLastName) { success ->
+                        if (success) {
+                            // Optionally show a success message
+                        } else {
+                            // Optionally show a failure message
+                        }
+                    }
+                },
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text("Save Changes")
+            }
         } else {
             Text(
                 text = "$firstName $lastName",
