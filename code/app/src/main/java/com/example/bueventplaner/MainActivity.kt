@@ -24,11 +24,6 @@ class MainActivity : ComponentActivity() {
 fun MyApp() {
     val navController = rememberNavController()
 
-//    BUEventPlanerTheme {
-//        Surface {
-//            NavGraph(navController = navController)
-//        }
-//    }
     MaterialTheme {
         Surface {
             NavGraph(navController = navController)
