@@ -25,21 +25,37 @@ fun SignupPage(navController: NavController) {
             AuthPage2(
                 modifier = Modifier.padding(paddingValues),
                 navController = navController,
-                onRegister = { username, password ->
-                    registerUser(username, password, navController)
+                onRegister = { username, password, firstName, lastName ->
+                    registerUser(username, password, firstName, lastName, navController)
                 }
             )
         }
     )
 }
 
-private fun registerUser(email: String, password: String, navController: NavController) {
+private fun registerUser(email: String, password: String, firstName: String, lastName: String, navController: NavController) {
     val auth = FirebaseAuth.getInstance()
+    val database = Firebase.database.reference
+
     auth.createUserWithEmailAndPassword(email, password)
         .addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                Toast.makeText(navController.context, "Registration successful!", Toast.LENGTH_SHORT).show()
-                navController.navigate("login")
+                val userId = auth.currentUser?.uid
+                if (userId != null) {
+                    val userMap = mapOf(
+                        "firstName" to firstName,
+                        "lastName" to lastName,
+                        "email" to email
+                    )
+                    database.child("users").child(userId).setValue(userMap)
+                        .addOnSuccessListener {
+                            Toast.makeText(navController.context, "Registration successful!", Toast.LENGTH_SHORT).show()
+                            navController.navigate("login")
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(navController.context, "Failed to save user info.", Toast.LENGTH_SHORT).show()
+                        }
+                }
             } else {
                 val errorMessage = task.exception?.message ?: "Registration failed"
                 Toast.makeText(navController.context, errorMessage, Toast.LENGTH_SHORT).show()
@@ -48,15 +64,18 @@ private fun registerUser(email: String, password: String, navController: NavCont
 }
 
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthPage2(
     modifier: Modifier = Modifier,
     navController: NavController,
-    onRegister: (String, String) -> Unit
+    onRegister: (String, String, String, String) -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -115,12 +134,43 @@ fun AuthPage2(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
+                TextField(
+                    value = firstName,
+                    onValueChange = { firstName = it },
+                    label = { Text("First Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.textFieldColors(
+                        containerColor = Color.White,
+                        focusedIndicatorColor = Color(0xFFCC0000),
+                        unfocusedIndicatorColor = Color.Gray,
+                        focusedLabelColor = Color(0xFFCC0000),
+                        unfocusedLabelColor = Color.Gray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextField(
+                    value = lastName,
+                    onValueChange = { lastName = it },
+                    label = { Text("Last Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.textFieldColors(
+                        containerColor = Color.White,
+                        focusedIndicatorColor = Color(0xFFCC0000),
+                        unfocusedIndicatorColor = Color.Gray,
+                        focusedLabelColor = Color(0xFFCC0000),
+                        unfocusedLabelColor = Color.Gray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
                 // register button
                 Button(
                     onClick = {
-                        onRegister(email, password)
+                        onRegister(email, password, firstName, lastName)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
