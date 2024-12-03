@@ -97,6 +97,14 @@ dependencies {
     implementation ("com.google.accompanist:accompanist-pager-indicators:0.30.1")
     implementation ("com.google.firebase:firebase-storage-ktx:20.2.0")
 
+    implementation ("com.google.firebase:firebase-auth")
+    implementation ("com.google.android.gms:play-services-auth")
+
+    implementation ("com.google.android.gms:play-services-auth:20.7.0")
+    implementation ("com.google.firebase:firebase-auth-ktx:22.1.1")
+
+
+
 
 
 }

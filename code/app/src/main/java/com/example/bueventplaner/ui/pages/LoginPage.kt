@@ -20,9 +20,42 @@ import com.example.bueventplaner.ui.theme.BUEventPlanerTheme
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.auth.FirebaseAuth
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.android.gms.common.api.ApiException
+
+
 
 @Composable
 fun LoginPage(navController: NavController) {
+    val auth = FirebaseAuth.getInstance()
+    val context = LocalContext.current
+
+    // Configure Google Sign-In
+    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+        .requestIdToken(context.getString(R.string.default_web_client_id))
+        .requestEmail()
+        .build()
+    val googleSignInClient = GoogleSignIn.getClient(context, gso)
+
+    // Google Sign-In Launcher
+    val googleSignInLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            firebaseAuthWithGoogle(account, navController)
+        } catch (e: ApiException) {
+            Toast.makeText(context, "Google Sign-In failed: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         content = { paddingValues ->
@@ -32,9 +65,29 @@ fun LoginPage(navController: NavController) {
                 onLogin = { username, password ->
                     authenticateUser(username, password, navController)
                 },
+                onGoogleLogin = {
+                    googleSignInClient.signOut().addOnCompleteListener {
+                        val signInIntent = googleSignInClient.signInIntent
+                        googleSignInLauncher.launch(signInIntent)
+                    }
+                }
             )
         }
     )
+}
+
+private fun firebaseAuthWithGoogle(account: GoogleSignInAccount?, navController: NavController) {
+    val auth = FirebaseAuth.getInstance()
+    val credential = GoogleAuthProvider.getCredential(account?.idToken, null)
+    auth.signInWithCredential(credential)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Toast.makeText(navController.context, "Google Sign-In successful!", Toast.LENGTH_SHORT).show()
+                navController.navigate("event_list")
+            } else {
+                Toast.makeText(navController.context, "Google Sign-In failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
 }
 
 private fun authenticateUser(email: String, password: String, navController: NavController) {
@@ -64,6 +117,7 @@ fun AuthPage(
     navController: NavController,
     modifier: Modifier = Modifier,
     onLogin: (String, String) -> Unit,
+    onGoogleLogin: () -> Unit
 ) {
     var email by remember { mutableStateOf("caoyc2022@gmail.com") }
     var password by remember { mutableStateOf("123456") }
@@ -170,7 +224,7 @@ fun AuthPage(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    IconButton(onClick = { /* Google Login */ }) {
+                    IconButton(onClick = onGoogleLogin) {
                         Icon(
                             painter = painterResource(id = R.drawable.google),
                             contentDescription = "Google Login",
