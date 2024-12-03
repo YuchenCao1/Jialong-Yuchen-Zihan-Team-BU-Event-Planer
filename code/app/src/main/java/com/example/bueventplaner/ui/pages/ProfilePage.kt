@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +34,7 @@ import com.example.bueventplaner.services.FirebaseService.updateProfileImageUrl
 import com.example.bueventplaner.services.FirebaseService.uploadImageToFirebase
 import com.example.bueventplaner.ui.viewmodels.ProfileViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,15 +102,32 @@ fun ProfilePage(navController: NavController, viewModel: ProfileViewModel = view
 
 @Composable
 fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: String, lastName: String, photoPath: String) {
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val userId = currentUser?.uid ?: ""
     val coroutineScope = rememberCoroutineScope()
-    var updatedFirstName by remember { mutableStateOf(firstName) }
-    var updatedLastName by remember { mutableStateOf(lastName) }
+    var profileImageUrl by remember { mutableStateOf<String?>(null) }
+
+    // Fetch the profile image URL from Firebase
+    LaunchedEffect(Unit) {
+        val storageReference = FirebaseStorage.getInstance().reference
+        val filePath = "profilePics/${userId}.jpg"
+        storageReference.child(filePath).downloadUrl
+            .addOnSuccessListener { url ->
+                profileImageUrl = url.toString()
+            }
+            .addOnFailureListener { e ->
+                println("Failed to fetch profile image URL: ${e.message}")
+                profileImageUrl = null
+            }
+    }
+
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             coroutineScope.launch {
                 uploadImageToFirebase(it) { downloadUrl ->
                     if (downloadUrl != null) {
                         updateProfileImageUrl(downloadUrl)
+                        profileImageUrl = downloadUrl // Update the state with the new URL
                     }
                 }
             }
@@ -125,16 +144,26 @@ fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: St
             modifier = Modifier
                 .size(100.dp)
                 .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
-                .clickable { launcher.launch("image/*") } // Open file picker
+                .clickable { launcher.launch("image/*") }
         ) {
-            AsyncImage(
-                model = photoPath,
-                contentDescription = "Profile Picture",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp)
-            )
+            if (profileImageUrl != null) {
+                AsyncImage(
+                    model = profileImageUrl,
+                    contentDescription = "Profile Picture",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                )
+            } else {
+                // Placeholder while loading or on error
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = "Default Profile Picture",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -174,6 +203,7 @@ fun ProfileHeader(viewModel: ProfileViewModel, isEditing: Boolean, firstName: St
         }
     }
 }
+
 
 @Composable
 fun TabSection(navController: NavController, viewModel: ProfileViewModel) {
