@@ -23,7 +23,7 @@ fun NavGraph(navController: NavHostController) {
             EventDetailsView(navController, eventId)
         }
         composable("onboarding") { OnboardingPage(navController) }
-        composable("profile") { ProfilePage(navController) }
+        composable("profile") { ProfilePage(navController = navController) }
 
     }
 }

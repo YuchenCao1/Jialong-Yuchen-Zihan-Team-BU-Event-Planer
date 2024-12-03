@@ -1,9 +1,6 @@
 package com.example.bueventplaner.ui.pages
 
-import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,6 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.bueventplaner.data.model.User
 import com.example.bueventplaner.ui.theme.BUEventPlanerTheme
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
@@ -25,13 +23,14 @@ fun SignupPage(navController: NavController) {
             AuthPage2(
                 modifier = Modifier.padding(paddingValues),
                 navController = navController,
-                onRegister = { username, password ->
-                    registerUser(username, password, navController)
+                onRegister = { username, password, firstName, lastName ->
+                    registerUser(username, password, firstName, lastName, navController)
                 }
             )
         }
     )
 }
+
 
 private fun registerUser(email: String, password: String, navController: NavController) {
     val auth = FirebaseAuth.getInstance()
@@ -53,10 +52,12 @@ private fun registerUser(email: String, password: String, navController: NavCont
 fun AuthPage2(
     modifier: Modifier = Modifier,
     navController: NavController,
-    onRegister: (String, String) -> Unit
+    onRegister: (String, String, String, String) -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -82,6 +83,36 @@ fun AuthPage2(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // First Name
+                TextField(
+                    value = firstName,
+                    onValueChange = { firstName = it },
+                    label = { Text("First Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.textFieldColors(
+                        containerColor = Color.White,
+                        focusedIndicatorColor = Color(0xFFCC0000),
+                        unfocusedIndicatorColor = Color.Gray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Last Name
+                TextField(
+                    value = lastName,
+                    onValueChange = { lastName = it },
+                    label = { Text("Last Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.textFieldColors(
+                        containerColor = Color.White,
+                        focusedIndicatorColor = Color(0xFFCC0000),
+                        unfocusedIndicatorColor = Color.Gray
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 // Username
                 TextField(
                     value = email,
@@ -91,9 +122,7 @@ fun AuthPage2(
                     colors = TextFieldDefaults.textFieldColors(
                         containerColor = Color.White,
                         focusedIndicatorColor = Color(0xFFCC0000),
-                        unfocusedIndicatorColor = Color.Gray,
-                        focusedLabelColor = Color(0xFFCC0000),
-                        unfocusedLabelColor = Color.Gray
+                        unfocusedIndicatorColor = Color.Gray
                     )
                 )
 
@@ -109,15 +138,13 @@ fun AuthPage2(
                     colors = TextFieldDefaults.textFieldColors(
                         containerColor = Color.White,
                         focusedIndicatorColor = Color(0xFFCC0000),
-                        unfocusedIndicatorColor = Color.Gray,
-                        focusedLabelColor = Color(0xFFCC0000),
-                        unfocusedLabelColor = Color.Gray
+                        unfocusedIndicatorColor = Color.Gray
                     )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // register button
+                // Register button
                 Button(
                     onClick = {
                         onRegister(email, password)
@@ -132,7 +159,7 @@ fun AuthPage2(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // switch to login
+                // Switch to login
                 TextButton(
                     onClick = { navController.navigate("login") },
                     modifier = Modifier.fillMaxWidth()
@@ -147,5 +174,3 @@ fun AuthPage2(
         }
     }
 }
-
-

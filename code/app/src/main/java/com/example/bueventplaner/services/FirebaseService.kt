@@ -50,6 +50,7 @@ object FirebaseService {
             }
         }.addOnFailureListener { exception ->
             println("Failed to fetch events: ${exception.message}")
+
             callback(emptyList())
         }
     }
