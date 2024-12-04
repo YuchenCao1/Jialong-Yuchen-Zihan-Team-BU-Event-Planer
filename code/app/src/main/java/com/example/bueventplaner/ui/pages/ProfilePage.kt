@@ -157,11 +157,13 @@ fun ProfileHeader(
                 uploadImageToFirebase(it) { downloadUrl ->
                     if (downloadUrl != null) {
                         updateProfileImageUrl(downloadUrl)
+                        profileImageUrl = downloadUrl
                     }
                 }
             }
         }
     }
+
 
     Column(
         modifier = Modifier
