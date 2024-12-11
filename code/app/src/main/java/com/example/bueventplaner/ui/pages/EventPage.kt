@@ -370,6 +370,7 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
     var event by remember { mutableStateOf<Event?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isRegistered by remember { mutableStateOf(false) }
+    val TAG = "MyDebugTag"
 
     // Fetch event details and check registration status
     LaunchedEffect(eventId) {
@@ -389,14 +390,32 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                         savedUsers = entity.savedUsers
                     )
                 }
+
+                if(isOnline(context)) {
+                    val currentUser = FirebaseAuth.getInstance().currentUser
+                    if (currentUser != null) {
+                        val userId = currentUser.uid
+                        val userRef = Firebase.database.reference.child("users").child(userId)
+                        userRef.child("savedEvents").get().addOnSuccessListener { snapshot ->
+                            // Use explicit type casting to avoid type inference issues
+                            val savedEvents = snapshot.value as? List<String> ?: emptyList()
+                            isRegistered = eventId in savedEvents
+                            Log.d(TAG, "Success in ED: ${isRegistered}")
+                        }.addOnFailureListener {
+                            Log.d(TAG, "Failed to fetch saved events in ED: ${it.message}")
+                        }
+                    }
+                }
                 isLoading = event == null // Show loading indicator if no cached event found
             }
 
             // If online, fetch latest event from Firebase
             if (event == null && isOnline(context)) {
+                Log.d(TAG, "111")
                 FirebaseService.fetchEventById(context, id) { fetchedEvent ->
                     event = fetchedEvent
                     isLoading = false
+                    Log.d(TAG, "222")
 
                     // Update Room database with the fetched event
                     fetchedEvent?.let { entity ->
