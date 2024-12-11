@@ -17,6 +17,6 @@ data class EventEntity(
     @ColumnInfo(name = "end_time") val endTime: String,
     val photo: String,
     val eventUrl: String,
-    @ColumnInfo(name = "savedUsers") val savedUsers: List<String> // TypeConverter 必须正确配置
+    @ColumnInfo(name = "savedUsers") val savedUsers: List<String>
 )
 

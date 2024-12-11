@@ -31,7 +31,7 @@ object FirebaseService {
         val TAG = "MyDebugTag"
         Log.d(TAG, "hhhhh111")
 
-        // Step 1: Launch a coroutine to collect cached events
+        // Launch a coroutine to collect cached events
         val cachedEventsJob = kotlinx.coroutines.GlobalScope.launch {
             eventDao.getAllEvents().collect { cachedEvents ->
                 Log.d(TAG, "cached events in RB: $cachedEvents")
@@ -53,7 +53,7 @@ object FirebaseService {
             }
         }
 
-        // Step 2: Fetch latest data from Firebase
+        // Fetch latest data from Firebase
         Firebase.database.reference.child("events").get().addOnSuccessListener { snapshot ->
             if (snapshot.exists()) {
                 Log.d(TAG, "Fetched Firebase events: ${snapshot.childrenCount}")
@@ -123,7 +123,7 @@ object FirebaseService {
         val database = EventDatabase.getDatabase(context) // Get Room database instance
         val eventDao = database.eventDao()
 
-        // Step 1: Collect the event from Room database using Flow
+        // Collect the event from Room database using Flow
         val cachedEventFlow = eventDao.getEventById(eventId)
         cachedEventFlow.collect { cachedEvent ->
             if (cachedEvent != null) {
@@ -141,7 +141,7 @@ object FirebaseService {
             }
         }
 
-        // Step 2: Fetch the latest data from Firebase if network is available
+        // Fetch the latest data from Firebase if network is available
         Firebase.database.reference.child("events").child(eventId).get().addOnSuccessListener { snapshot ->
             if (snapshot.exists()) {
                 val event = snapshot.getValue(Event::class.java)?.copy(id = eventId)
@@ -149,7 +149,7 @@ object FirebaseService {
                     val storageRef = Firebase.storage.reference.child(fetchedEvent.photo)
                     storageRef.downloadUrl.addOnSuccessListener { uri ->
                         val updatedEvent = fetchedEvent.copy(photo = uri.toString())
-                        // Step 3: Update Room database
+                        // Update Room database
                         eventDao.insertEvents(listOf(EventEntity(
                             id = updatedEvent.id,
                             title = updatedEvent.title,
