@@ -78,7 +78,7 @@ object FirebaseService {
             callback(null)
         }
     }
-    fun registerEventForUser(eventId: String, callback: (Boolean) -> Unit) {
+    fun addEventForUser(eventId: String, callback: (Boolean) -> Unit) {
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             callback(false)
@@ -138,7 +138,7 @@ object FirebaseService {
         }
     }
 
-    fun unregisterEventForUser(eventId: String, callback: (Boolean) -> Unit) {
+    fun removeEventForUser(eventId: String, callback: (Boolean) -> Unit) {
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             callback(false)

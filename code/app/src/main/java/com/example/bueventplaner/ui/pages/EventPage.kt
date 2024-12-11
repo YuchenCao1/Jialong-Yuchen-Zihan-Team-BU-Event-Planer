@@ -43,6 +43,7 @@ import com.google.firebase.database.ktx.database
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.navigation.NavGraph.Companion.findStartDestination
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,7 +87,33 @@ fun EventListPage(navController: NavController) {
             )
         },
         bottomBar = {
-            BottomNavigationBar(navController = navController)
+            val items = listOf(
+                BottomNavItem("Search", Icons.Default.Search, "event_list"),
+                BottomNavItem("Calendar", Icons.Default.CalendarToday, "calendar"),
+                BottomNavItem("Profile", Icons.Default.Person, "profile")
+            )
+
+            NavigationBar(
+                containerColor = Color(0xFFF0F0F0)
+            ) {
+                val currentRoute = currentRoute(navController)
+                items.forEach { item ->
+                    NavigationBarItem(
+                        icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
+                        label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
+                        selected = currentRoute == item.route,
+                        onClick = {
+                            navController.navigate(item.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
+            }
         },
         modifier = Modifier.background(color = Color.White)
     ) { innerPadding ->
@@ -275,6 +302,7 @@ fun CustomDotIndicator(
 fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
         BottomNavItem("Search", Icons.Default.Search, "event_list"),
+        BottomNavItem("Calendar", Icons.Default.CalendarToday, "calendar"),
         BottomNavItem("Profile", Icons.Default.Person, "profile")
     )
 
@@ -289,7 +317,7 @@ fun BottomNavigationBar(navController: NavController) {
                 selected = currentRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
-                        popUpTo(navController.graph.startDestinationId) {
+                        popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
                         launchSingleTop = true
@@ -315,9 +343,9 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
     val context = LocalContext.current
     var event by remember { mutableStateOf<Event?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    var isRegistered by remember { mutableStateOf(false) }
+    var isadded by remember { mutableStateOf(false) }
 
-    // Fetch event details and check registration status
+    // Fetch event details and check add status
     LaunchedEffect(eventId) {
         eventId?.let { it ->
             FirebaseService.fetchEventById(context, it) { fetchedEvent ->
@@ -331,7 +359,7 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
                     userRef.child("savedEvents").get().addOnSuccessListener { snapshot ->
                         // Use explicit type casting to avoid type inference issues
                         val savedEvents = snapshot.value as? List<String> ?: emptyList()
-                        isRegistered = eventId in savedEvents
+                        isadded = eventId in savedEvents
                     }.addOnFailureListener {
                         println("Failed to fetch saved events: ${it.message}")
                     }
@@ -495,26 +523,26 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
                     }
                 }
                 item {
-                    // Display Register Button
+                    // Display add Button
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
                         onClick = {
-                            if (isRegistered) {
-                                FirebaseService.unregisterEventForUser(eventId!!) { isSuccess ->
+                            if (isadded) {
+                                FirebaseService.removeEventForUser(eventId!!) { isSuccess ->
                                     if (isSuccess) {
-                                        Toast.makeText(context, "Event unregistered successfully!", Toast.LENGTH_SHORT).show()
-                                        isRegistered = false
+                                        Toast.makeText(context, "Event remove successfully!", Toast.LENGTH_SHORT).show()
+                                        isadded = false
                                     } else {
-                                        Toast.makeText(context, "Failed to unregister event. Please try again.", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Failed to remove event. Please try again.", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             } else {
-                                FirebaseService.registerEventForUser(eventId!!) { isSuccess ->
+                                FirebaseService.addEventForUser(eventId!!) { isSuccess ->
                                     if (isSuccess) {
-                                        Toast.makeText(context, "Event registered successfully!", Toast.LENGTH_SHORT).show()
-                                        isRegistered = true
+                                        Toast.makeText(context, "Event added successfully!", Toast.LENGTH_SHORT).show()
+                                        isadded = true
                                     } else {
-                                        Toast.makeText(context, "Failed to register event. Please try again.", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Failed to add event. Please try again.", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
@@ -523,10 +551,10 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
                             .padding(horizontal = 16.dp)
                             .fillMaxWidth()
                             .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (isRegistered) Color.Gray else Color.Red)
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isadded) Color.Gray else Color.Red)
                     ) {
                         Text(
-                            text = if (isRegistered) "Unregister" else "Register",
+                            text = if (isadded) "Remove from Calendar" else "Add to Calendar",
                             color = Color.White,
                             style = MaterialTheme.typography.bodyLarge
                         )
