@@ -9,7 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,8 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.bueventplaner.R
 import com.example.bueventplaner.data.model.Event
@@ -48,23 +49,22 @@ fun CalendarPage(
         initialMonth = YearMonth.now()
     )
 
-    // Group events by LocalDate (from their startTime)
     val eventsByDate = remember(addedEvents) {
         addedEvents.groupBy { it.startLocalDate() }
     }
 
-    // Store the currently selected date
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "My Events Calendar") },
+                title = { Text(text = "My Events Calendar", fontSize = 20.sp) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigate("event_list") }) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_back),
-                            contentDescription = "Back"
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
@@ -82,67 +82,81 @@ fun CalendarPage(
                 modifier = Modifier.padding(16.dp)
             )
 
-            Calendar(
-                calendarState = calendarState,
-                dayContent = { day: Day ->
-                    val date = day.date
-                    val dayEvents = eventsByDate[date] ?: emptyList()
+            // Ensure the Calendar takes enough vertical space
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f) // Let the calendar fill the available vertical space
+            ) {
+                Calendar(
+                    calendarState = calendarState,
+                    dayContent = { day: Day ->
+                        val date = day.date
+                        val dayEvents = eventsByDate[date] ?: emptyList()
 
-                    val backgroundColor = when {
-                        day.isCurrentDay -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
-                        !day.isFromCurrentMonth -> Color.LightGray.copy(alpha = 0.5f)
-                        else -> Color.Transparent
-                    }
-
-                    val maxVisibleEvents = 3
-
-                    Column(
-                        modifier = Modifier
-                            .padding(4.dp)
-                            .background(color = backgroundColor, shape = CircleShape)
-                            .fillMaxSize()
-                            .clickable {
-                                // When the user selects a date
-                                selectedDate = date
-                            },
-                        verticalArrangement = Arrangement.Top,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Display the day number
-                        Text(
-                            text = date.dayOfMonth.toString(),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-
-                        // Display a few events as chips
-                        dayEvents.take(maxVisibleEvents).forEach { event ->
-                            EventChip(event = event)
+                        val backgroundColor = when {
+                            day.isCurrentDay -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                            !day.isFromCurrentMonth -> Color.LightGray.copy(alpha = 0.5f)
+                            else -> Color.Transparent
                         }
 
-                        // If there are more events than maxVisibleEvents, show a "more" indicator
-                        if (dayEvents.size > maxVisibleEvents) {
+                        val maxVisibleEvents = 3
+
+                        Column(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .background(color = backgroundColor, shape = RoundedCornerShape(8.dp))
+                                .fillMaxSize()
+                                .clickable {
+                                    selectedDate = date
+                                },
+                            verticalArrangement = Arrangement.Top,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
                             Text(
-                                text = "+${dayEvents.size - maxVisibleEvents} more",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
+                                text = date.dayOfMonth.toString(),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(bottom = 4.dp)
                             )
+
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(60.dp) // Adjust height if needed
+                            ) {
+                                items(dayEvents.take(maxVisibleEvents)) { event ->
+                                    EventChip(event = event)
+                                }
+
+                                if (dayEvents.size > maxVisibleEvents) {
+                                    item {
+                                        Text(
+                                            text = "+${dayEvents.size - maxVisibleEvents} more",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.Gray
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
 
-            // Show events for the selected date below the calendar
             val eventsToday = selectedDate?.let { eventsByDate[it] } ?: emptyList()
 
-            if (eventsToday.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "No events on this day.")
-                }
-            } else {
-                LazyColumn(contentPadding = PaddingValues(16.dp)) {
+            LazyColumn(contentPadding = PaddingValues(16.dp)) {
+                if (eventsToday.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No events on this day.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
                     items(eventsToday) { event ->
                         EventItem(event = event)
                     }
@@ -151,6 +165,7 @@ fun CalendarPage(
         }
     }
 }
+
 
 @Composable
 fun EventChip(event: Event) {

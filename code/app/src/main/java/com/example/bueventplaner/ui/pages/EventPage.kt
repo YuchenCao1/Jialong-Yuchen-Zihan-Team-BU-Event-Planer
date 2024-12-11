@@ -87,31 +87,32 @@ fun EventListPage(navController: NavController) {
             )
         },
         bottomBar = {
-            val items = listOf(
-                BottomNavItem("Search", Icons.Default.Search, "event_list"),
-                BottomNavItem("Calendar", Icons.Default.CalendarToday, "calendar"),
-                BottomNavItem("Profile", Icons.Default.Person, "profile")
-            )
-
-            NavigationBar(
-                containerColor = Color(0xFFF0F0F0)
-            ) {
-                val currentRoute = currentRoute(navController)
-                items.forEach { item ->
-                    NavigationBarItem(
-                        icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
-                        label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
-                        selected = currentRoute == item.route,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+            BottomAppBar(containerColor = Color(0xFFF0F0F0),
+                modifier = Modifier.height(80.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { navController.navigate("event_list") }) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
                         }
-                    )
+                    }
+
+                    IconButton(onClick = { navController.navigate("calendar") }) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Calendar")
+                        }
+                    }
+
+                    IconButton(onClick = { navController.navigate("profile") }) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
+                        }
+                    }
                 }
             }
         },
