@@ -43,11 +43,26 @@ import com.google.firebase.database.ktx.database
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.room.Room
+import com.example.bueventplaner.data.repository.EventDao
+import com.example.bueventplaner.data.repository.EventDatabase
+import kotlinx.coroutines.launch
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import androidx.core.content.ContextCompat.getSystemService
+import android.content.Context
+import com.example.bueventplaner.data.model.EventEntity
+import android.util.Log
 
+fun isOnline(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    val networkInfo = connectivityManager.activeNetworkInfo
+    return networkInfo != null && networkInfo.isConnected
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EventListPage(navController: NavController) {
+fun EventListPage(navController: NavController, eventDao: EventDao) {
     val context = LocalContext.current
     var allEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
     var filteredEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
@@ -55,12 +70,51 @@ fun EventListPage(navController: NavController) {
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        FirebaseService.fetchEvents(context) { fetchedEvents ->
-            allEvents = fetchedEvents
-            filteredEvents = fetchedEvents
-            isLoading = false
+        launch {
+            eventDao.getAllEvents().collect { cachedEvents ->
+                allEvents = cachedEvents.map { eventEntity ->
+                    Event(
+                        id = eventEntity.id,
+                        title = eventEntity.title,
+                        description = eventEntity.description,
+                        location = eventEntity.location,
+                        startTime = eventEntity.startTime,
+                        endTime = eventEntity.endTime,
+                        photo = eventEntity.photo
+                    )
+                }
+                filteredEvents = allEvents
+                isLoading = false
+            }
+        }
+
+        // Fetch latest events from Firebase if online
+        launch {
+            if (isOnline(context)) {
+                FirebaseService.fetchEvents(context) { fetchedEvents ->
+                    allEvents = fetchedEvents
+                    filteredEvents = fetchedEvents
+                    isLoading = false
+
+                    // Update Room database with the latest events
+                    eventDao.insertEvents(fetchedEvents.map { entity ->
+                        EventEntity(
+                            id = entity.id,
+                            title = entity.title,
+                            description = entity.description,
+                            eventUrl = entity.eventUrl,
+                            photo = entity.photo,
+                            location = entity.location,
+                            startTime = entity.startTime,
+                            endTime = entity.endTime,
+                            savedUsers = entity.savedUsers
+                        )
+                    })
+                }
+            }
         }
     }
+
 
     LaunchedEffect(searchQuery) {
         filteredEvents = if (searchQuery.isEmpty()) {
@@ -311,7 +365,7 @@ fun currentRoute(navController: NavController): String? {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EventDetailsView(navController: NavController, eventId: String?) {
+fun EventDetailsView(navController: NavController, eventId: String?, eventDao: EventDao) {
     val context = LocalContext.current
     var event by remember { mutableStateOf<Event?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -319,21 +373,48 @@ fun EventDetailsView(navController: NavController, eventId: String?) {
 
     // Fetch event details and check registration status
     LaunchedEffect(eventId) {
-        eventId?.let { it ->
-            FirebaseService.fetchEventById(context, it) { fetchedEvent ->
-                event = fetchedEvent
-                isLoading = false
+        eventId?.let { id ->
+            // Collect the event from Room database
+            eventDao.getEventById(id).collect { cachedEvent ->
+                event = cachedEvent?.let { entity ->
+                    Event(
+                        id = entity.id,
+                        title = entity.title,
+                        description = entity.description,
+                        eventUrl = entity.eventUrl,
+                        photo = entity.photo,
+                        location = entity.location,
+                        startTime = entity.startTime,
+                        endTime = entity.endTime,
+                        savedUsers = entity.savedUsers
+                    )
+                }
+                isLoading = event == null // Show loading indicator if no cached event found
+            }
 
-                val currentUser = FirebaseAuth.getInstance().currentUser
-                if (currentUser != null) {
-                    val userId = currentUser.uid
-                    val userRef = Firebase.database.reference.child("users").child(userId)
-                    userRef.child("savedEvents").get().addOnSuccessListener { snapshot ->
-                        // Use explicit type casting to avoid type inference issues
-                        val savedEvents = snapshot.value as? List<String> ?: emptyList()
-                        isRegistered = eventId in savedEvents
-                    }.addOnFailureListener {
-                        println("Failed to fetch saved events: ${it.message}")
+            // If online, fetch latest event from Firebase
+            if (event == null && isOnline(context)) {
+                FirebaseService.fetchEventById(context, id) { fetchedEvent ->
+                    event = fetchedEvent
+                    isLoading = false
+
+                    // Update Room database with the fetched event
+                    fetchedEvent?.let { entity ->
+                        eventDao.insertEvents(
+                            listOf(
+                                EventEntity(
+                                    id = entity.id,
+                                    title = entity.title,
+                                    description = entity.description,
+                                    eventUrl = entity.eventUrl,
+                                    photo = entity.photo,
+                                    location = entity.location,
+                                    startTime = entity.startTime,
+                                    endTime = entity.endTime,
+                                    savedUsers = entity.savedUsers
+                                )
+                            )
+                        )
                     }
                 }
             }
