@@ -70,50 +70,50 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        launch {
-            eventDao.getAllEvents().collect { cachedEvents ->
-                allEvents = cachedEvents.map { eventEntity ->
-                    Event(
-                        id = eventEntity.id,
-                        title = eventEntity.title,
-                        description = eventEntity.description,
-                        location = eventEntity.location,
-                        startTime = eventEntity.startTime,
-                        endTime = eventEntity.endTime,
-                        photo = eventEntity.photo
-                    )
-                }
-                filteredEvents = allEvents
-                isLoading = false
+        // Collect cached events from Room
+        eventDao.getAllEvents().collect { cachedEvents ->
+            allEvents = cachedEvents.map { eventEntity ->
+                Event(
+                    id = eventEntity.id,
+                    title = eventEntity.title,
+                    description = eventEntity.description,
+                    location = eventEntity.location,
+                    startTime = eventEntity.startTime,
+                    endTime = eventEntity.endTime,
+                    photo = eventEntity.photo,
+                    eventUrl = eventEntity.eventUrl,
+                    savedUsers = eventEntity.savedUsers
+                )
             }
+            filteredEvents = allEvents
+            isLoading = false
         }
 
-        // Fetch latest events from Firebase if online
-        launch {
-            if (isOnline(context)) {
-                FirebaseService.fetchEvents(context) { fetchedEvents ->
-                    allEvents = fetchedEvents
-                    filteredEvents = fetchedEvents
-                    isLoading = false
+        // Fetch events from Firebase if online
+        if (isOnline(context)) {
+            FirebaseService.fetchEvents(context) { fetchedEvents ->
+                allEvents = fetchedEvents
+                filteredEvents = fetchedEvents
+                isLoading = false
 
-                    // Update Room database with the latest events
-                    eventDao.insertEvents(fetchedEvents.map { entity ->
-                        EventEntity(
-                            id = entity.id,
-                            title = entity.title,
-                            description = entity.description,
-                            eventUrl = entity.eventUrl,
-                            photo = entity.photo,
-                            location = entity.location,
-                            startTime = entity.startTime,
-                            endTime = entity.endTime,
-                            savedUsers = entity.savedUsers
-                        )
-                    })
-                }
+                // Update Room database
+                eventDao.insertEvents(fetchedEvents.map { event ->
+                    EventEntity(
+                        id = event.id,
+                        title = event.title,
+                        description = event.description,
+                        eventUrl = event.eventUrl,
+                        photo = event.photo,
+                        location = event.location,
+                        startTime = event.startTime,
+                        endTime = event.endTime,
+                        savedUsers = event.savedUsers
+                    )
+                })
             }
         }
     }
+
 
 
     LaunchedEffect(searchQuery) {
