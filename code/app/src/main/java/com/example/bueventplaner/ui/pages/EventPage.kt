@@ -580,22 +580,42 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
                         onClick = {
-                            if (isRegistered) {
-                                FirebaseService.unregisterEventForUser(eventId!!) { isSuccess ->
-                                    if (isSuccess) {
-                                        Toast.makeText(context, "Event unregistered successfully!", Toast.LENGTH_SHORT).show()
-                                        isRegistered = false
-                                    } else {
-                                        Toast.makeText(context, "Failed to unregister event. Please try again.", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
+                            if (!isOnline(context)) {
+                                Toast.makeText(context, "You are offline. Please check your network connection.", Toast.LENGTH_SHORT).show()
                             } else {
-                                FirebaseService.registerEventForUser(eventId!!) { isSuccess ->
-                                    if (isSuccess) {
-                                        Toast.makeText(context, "Event registered successfully!", Toast.LENGTH_SHORT).show()
-                                        isRegistered = true
-                                    } else {
-                                        Toast.makeText(context, "Failed to register event. Please try again.", Toast.LENGTH_SHORT).show()
+                                if (isRegistered) {
+                                    FirebaseService.unregisterEventForUser(context, eventId!!) { isSuccess ->
+                                        if (isSuccess) {
+                                            Toast.makeText(
+                                                context,
+                                                "Event unregistered successfully!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            isRegistered = false
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "Failed to unregister event. Please try again.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                } else {
+                                    FirebaseService.registerEventForUser(context, eventId!!) { isSuccess ->
+                                        if (isSuccess) {
+                                            Toast.makeText(
+                                                context,
+                                                "Event registered successfully!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            isRegistered = true
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "Failed to register event. Please try again.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     }
                                 }
                             }

@@ -15,8 +15,14 @@ import com.example.bueventplaner.data.repository.EventDatabase
 import com.example.bueventplaner.data.repository.EventDao
 import com.example.bueventplaner.data.model.EventEntity
 import android.util.Log
+import android.widget.Toast
 import kotlinx.coroutines.launch
 
+fun isOnline(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    val networkInfo = connectivityManager.activeNetworkInfo
+    return networkInfo != null && networkInfo.isConnected
+}
 
 object FirebaseService {
     suspend fun fetchEvents(context: Context, callback: (List<Event>) -> Unit) {
@@ -28,7 +34,7 @@ object FirebaseService {
         // Step 1: Launch a coroutine to collect cached events
         val cachedEventsJob = kotlinx.coroutines.GlobalScope.launch {
             eventDao.getAllEvents().collect { cachedEvents ->
-                Log.d(TAG, "Room cached events: $cachedEvents")
+                Log.d(TAG, "cached events in RB: $cachedEvents")
                 if (cachedEvents.isNotEmpty()) {
                     callback(cachedEvents.map { entity ->
                         Event(
@@ -84,7 +90,7 @@ object FirebaseService {
                                             savedUsers = e.savedUsers
                                         )
                                     })
-                                    Log.d(TAG, "Inserted events into Room: $events")
+                                    Log.d(TAG, "Inserted events into RB: $events")
                                     callback(events) // Return the latest events list
                                 }
                             }
@@ -99,7 +105,7 @@ object FirebaseService {
                     callback(emptyList())
                 }
             } else {
-                Log.d(TAG, "No events found in Firebase database.")
+                Log.d(TAG, "No events in FD.")
                 callback(emptyList())
             }
         }.addOnFailureListener { exception ->
@@ -168,9 +174,12 @@ object FirebaseService {
         }
     }
 
+    fun registerEventForUser(context: Context, eventId: String, callback: (Boolean) -> Unit) {
+        if (!isOnline(context)) {
+            callback(false)
+            return
+        }
 
-
-    fun registerEventForUser(eventId: String, callback: (Boolean) -> Unit) {
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             callback(false)
@@ -230,7 +239,12 @@ object FirebaseService {
         }
     }
 
-    fun unregisterEventForUser(eventId: String, callback: (Boolean) -> Unit) {
+    fun unregisterEventForUser(context: Context, eventId: String, callback: (Boolean) -> Unit) {
+        if (!isOnline(context)) {
+            callback(false)
+            return
+        }
+
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             callback(false)
