@@ -11,62 +11,157 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.ktx.storage
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
+import com.example.bueventplaner.data.repository.EventDatabase
+import com.example.bueventplaner.data.repository.EventDao
+import com.example.bueventplaner.data.model.EventEntity
+import android.util.Log
+import android.widget.Toast
+import kotlinx.coroutines.launch
+
+fun isOnline(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    val networkInfo = connectivityManager.activeNetworkInfo
+    return networkInfo != null && networkInfo.isConnected
+}
 
 object FirebaseService {
-    fun fetchEvents(context: Context, callback: (List<Event>) -> Unit) {
-        val database = Firebase.database.reference.child("events")
-        database.get().addOnSuccessListener { snapshot ->
+    suspend fun fetchEvents(context: Context, callback: (List<Event>) -> Unit) {
+        val database = EventDatabase.getDatabase(context) // Get Room database instance
+        val eventDao = database.eventDao()
+        val TAG = "MyDebugTag"
+        Log.d(TAG, "hhhhh111")
+
+        // Launch a coroutine to collect cached events
+        val cachedEventsJob = kotlinx.coroutines.GlobalScope.launch {
+            eventDao.getAllEvents().collect { cachedEvents ->
+                Log.d(TAG, "cached events in RB: $cachedEvents")
+                if (cachedEvents.isNotEmpty()) {
+                    callback(cachedEvents.map { entity ->
+                        Event(
+                            id = entity.id,
+                            title = entity.title,
+                            description = entity.description,
+                            eventUrl = entity.eventUrl,
+                            photo = entity.photo,
+                            location = entity.location,
+                            startTime = entity.startTime,
+                            endTime = entity.endTime,
+                            savedUsers = entity.savedUsers
+                        )
+                    })
+                }
+            }
+        }
+
+        // Fetch latest data from Firebase
+        Firebase.database.reference.child("events").get().addOnSuccessListener { snapshot ->
             if (snapshot.exists()) {
-                val tasks = mutableListOf<Task<Uri>>() // Used to store all download tasks
-                val events = mutableListOf<Event>()    // Used to store the final list of Event objects
+                Log.d(TAG, "Fetched Firebase events: ${snapshot.childrenCount}")
+                val tasks = mutableListOf<Task<Uri>>() // To store image URL fetch tasks
+                val events = mutableListOf<Event>()    // To store final list of Event objects
 
                 snapshot.children.forEach { eventSnapshot ->
+                    Log.d(TAG, "Event: ${eventSnapshot.key} -> ${eventSnapshot.value}")
                     val id = eventSnapshot.key ?: ""
                     val event = eventSnapshot.getValue(Event::class.java)?.copy(id = id)
                     if (event != null) {
-                        // Fetch the image URL from Firebase Storage
+                        // Fetch image URL from Firebase Storage
                         val storageRef = Firebase.storage.reference.child(event.photo)
                         val downloadTask = storageRef.downloadUrl
                         tasks.add(downloadTask)
 
-                        // Update the photo field of the event after download succeeds
+                        // Update the photo field of the event after URL fetch succeeds
                         downloadTask.addOnSuccessListener { uri ->
                             events.add(event.copy(photo = uri.toString()))
                             // Check if all tasks are completed
                             if (events.size == snapshot.children.count()) {
-                                callback(events)
+                                // Step 3: Update Room database
+                                kotlinx.coroutines.GlobalScope.launch {
+                                    eventDao.insertEvents(events.map { e ->
+                                        EventEntity(
+                                            id = e.id,
+                                            title = e.title,
+                                            description = e.description,
+                                            eventUrl = e.eventUrl,
+                                            photo = e.photo,
+                                            location = e.location,
+                                            startTime = e.startTime,
+                                            endTime = e.endTime,
+                                            savedUsers = e.savedUsers
+                                        )
+                                    })
+                                    Log.d(TAG, "Inserted events into RB: $events")
+                                    callback(events) // Return the latest events list
+                                }
                             }
                         }.addOnFailureListener {
-                            println("Failed to fetch image URL for event ${event.id}: ${it.message}")
+                            Log.d(TAG, "Failed to fetch image URL for event ${event.id}: ${it.message}")
                         }
                     }
                 }
 
-                // If no events exist, directly return an empty list
+                // If no events exist, return an empty list
                 if (tasks.isEmpty()) {
                     callback(emptyList())
                 }
             } else {
-                println("No events found in the database.")
+                Log.d(TAG, "No events in FD.")
                 callback(emptyList())
             }
         }.addOnFailureListener { exception ->
-            println("Failed to fetch events: ${exception.message}")
-
+            Log.d(TAG, "Failed to fetch events: ${exception.message}")
             callback(emptyList())
         }
+
+        // Ensure cachedEventsJob completes
+        cachedEventsJob.join()
     }
 
-    fun fetchEventById(context: Context, eventId: String, callback: (Event?) -> Unit) {
-        val database = Firebase.database.reference.child("events").child(eventId)
-        database.get().addOnSuccessListener { snapshot ->
+
+
+    suspend fun fetchEventById(context: Context, eventId: String, callback: (Event?) -> Unit) {
+        val database = EventDatabase.getDatabase(context) // Get Room database instance
+        val eventDao = database.eventDao()
+
+        // Collect the event from Room database using Flow
+        val cachedEventFlow = eventDao.getEventById(eventId)
+        cachedEventFlow.collect { cachedEvent ->
+            if (cachedEvent != null) {
+                callback(
+                    Event(
+                        id = cachedEvent.id,
+                        title = cachedEvent.title,
+                        description = cachedEvent.description,
+                        location = cachedEvent.location,
+                        startTime = cachedEvent.startTime,
+                        endTime = cachedEvent.endTime,
+                        photo = cachedEvent.photo
+                    )
+                )
+            }
+        }
+
+        // Fetch the latest data from Firebase if network is available
+        Firebase.database.reference.child("events").child(eventId).get().addOnSuccessListener { snapshot ->
             if (snapshot.exists()) {
                 val event = snapshot.getValue(Event::class.java)?.copy(id = eventId)
                 event?.let { fetchedEvent ->
                     val storageRef = Firebase.storage.reference.child(fetchedEvent.photo)
                     storageRef.downloadUrl.addOnSuccessListener { uri ->
-                        // Replace the photo field with the downloaded URL
-                        callback(fetchedEvent.copy(photo = uri.toString()))
+                        val updatedEvent = fetchedEvent.copy(photo = uri.toString())
+                        // Update Room database
+                        eventDao.insertEvents(listOf(EventEntity(
+                            id = updatedEvent.id,
+                            title = updatedEvent.title,
+                            description = updatedEvent.description,
+                            eventUrl = updatedEvent.eventUrl,
+                            photo = updatedEvent.photo,
+                            location = updatedEvent.location,
+                            startTime = updatedEvent.startTime,
+                            endTime = updatedEvent.endTime,
+                            savedUsers = updatedEvent.savedUsers
+                        )))
+                        callback(updatedEvent) // Return the latest event
                     }
                 } ?: callback(null)
             } else {
@@ -78,7 +173,13 @@ object FirebaseService {
             callback(null)
         }
     }
-    fun addEventForUser(eventId: String, callback: (Boolean) -> Unit) {
+
+    fun addEventForUser(context: Context, eventId: String, callback: (Boolean) -> Unit) {
+        if (!isOnline(context)) {
+            callback(false)
+            return
+        }
+        
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             callback(false)
@@ -138,7 +239,12 @@ object FirebaseService {
         }
     }
 
-    fun removeEventForUser(eventId: String, callback: (Boolean) -> Unit) {
+    fun removeEventForUser(context: Context, eventId: String, callback: (Boolean) -> Unit) {
+        if (!isOnline(context)) {
+            callback(false)
+            return
+        }
+        
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             callback(false)

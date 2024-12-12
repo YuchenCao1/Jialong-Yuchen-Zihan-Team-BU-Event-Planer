@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.android.application)
     id("com.google.gms.google-services")
+    id("kotlin-kapt")
 }
 
 android {
@@ -102,8 +103,18 @@ dependencies {
 
     implementation ("com.google.android.gms:play-services-auth:20.7.0")
     implementation ("com.google.firebase:firebase-auth-ktx:22.1.1")
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    kapt(libs.room.compiler)
+
+    implementation("androidx.room:room-runtime:2.5.2")
+    implementation("androidx.room:room-ktx:2.5.2")
+    kapt("androidx.room:room-compiler:2.5.2")
+
+    implementation ("com.google.code.gson:gson:2.9.0")
+
     implementation ("io.github.boguszpawlowski.composecalendar:composecalendar:1.3.0")
     implementation ("io.github.boguszpawlowski.composecalendar:kotlinx-datetime:1.3.0")
-
 
 }
