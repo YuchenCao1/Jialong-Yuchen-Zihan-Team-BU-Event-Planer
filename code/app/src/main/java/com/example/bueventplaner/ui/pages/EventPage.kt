@@ -429,7 +429,7 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                             // Use explicit type casting to avoid type inference issues
                             val savedEvents = snapshot.value as? List<String> ?: emptyList()
                             isadded = eventId in savedEvents
-                            Log.d(TAG, "Success in ED: ${isRegistered}")
+                            Log.d(TAG, "Success in ED: ${isadded}")
                         }.addOnFailureListener {
                             Log.d(TAG, "Failed to fetch saved events in ED: ${it.message}")
                         }
@@ -632,14 +632,14 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                                 Toast.makeText(context, "You are offline. Please check your network connection.", Toast.LENGTH_SHORT).show()
                             } else {
                                 if (isadded) {
-                                    FirebaseService.unregisterEventForUser(context, eventId!!) { isSuccess ->
+                                    FirebaseService.removeEventForUser(context, eventId!!) { isSuccess ->
                                         if (isSuccess) {
                                             Toast.makeText(
                                                 context,
                                                 "Event unregistered successfully!",
                                                 Toast.LENGTH_SHORT
                                             ).show()
-                                            isRegistered = false
+                                            isadded = false
                                         } else {
                                             Toast.makeText(
                                                 context,
@@ -649,14 +649,14 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                                         }
                                     }
                                 } else {
-                                    FirebaseService.registerEventForUser(context, eventId!!) { isSuccess ->
+                                    FirebaseService.addEventForUser(context, eventId!!) { isSuccess ->
                                         if (isSuccess) {
                                             Toast.makeText(
                                                 context,
                                                 "Event registered successfully!",
                                                 Toast.LENGTH_SHORT
                                             ).show()
-                                            isRegistered = true
+                                            isadded = true
                                         } else {
                                             Toast.makeText(
                                                 context,
