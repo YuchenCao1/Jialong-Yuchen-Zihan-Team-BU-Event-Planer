@@ -53,6 +53,7 @@ import androidx.core.content.ContextCompat.getSystemService
 import android.content.Context
 import com.example.bueventplaner.data.model.EventEntity
 import android.util.Log
+import androidx.navigation.NavGraph.Companion.findStartDestination
 
 fun isOnline(context: Context): Boolean {
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
@@ -140,7 +141,34 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
             )
         },
         bottomBar = {
-            BottomNavigationBar(navController = navController)
+            BottomAppBar(containerColor = Color(0xFFF0F0F0),
+                modifier = Modifier.height(80.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { navController.navigate("event_list") }) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
+                        }
+                    }
+
+                    IconButton(onClick = { navController.navigate("calendar") }) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Calendar")
+                        }
+                    }
+
+                    IconButton(onClick = { navController.navigate("profile") }) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
+                        }
+                    }
+                }
+            }
         },
         modifier = Modifier.background(color = Color.White)
     ) { innerPadding ->
@@ -329,6 +357,7 @@ fun CustomDotIndicator(
 fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
         BottomNavItem("Search", Icons.Default.Search, "event_list"),
+        BottomNavItem("Calendar", Icons.Default.CalendarToday, "calendar"),
         BottomNavItem("Profile", Icons.Default.Person, "profile")
     )
 
@@ -343,7 +372,7 @@ fun BottomNavigationBar(navController: NavController) {
                 selected = currentRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
-                        popUpTo(navController.graph.startDestinationId) {
+                        popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
                         launchSingleTop = true
@@ -369,10 +398,10 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
     val context = LocalContext.current
     var event by remember { mutableStateOf<Event?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    var isRegistered by remember { mutableStateOf(false) }
+    var isadded by remember { mutableStateOf(false) }
     val TAG = "MyDebugTag"
 
-    // Fetch event details and check registration status
+    // Fetch event details and check add status
     LaunchedEffect(eventId) {
         eventId?.let { id ->
             // Collect the event from Room database
@@ -399,7 +428,7 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                         userRef.child("savedEvents").get().addOnSuccessListener { snapshot ->
                             // Use explicit type casting to avoid type inference issues
                             val savedEvents = snapshot.value as? List<String> ?: emptyList()
-                            isRegistered = eventId in savedEvents
+                            isadded = eventId in savedEvents
                             Log.d(TAG, "Success in ED: ${isRegistered}")
                         }.addOnFailureListener {
                             Log.d(TAG, "Failed to fetch saved events in ED: ${it.message}")
@@ -595,14 +624,14 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                     }
                 }
                 item {
-                    // Display Register Button
+                    // Display add Button
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
                         onClick = {
                             if (!isOnline(context)) {
                                 Toast.makeText(context, "You are offline. Please check your network connection.", Toast.LENGTH_SHORT).show()
                             } else {
-                                if (isRegistered) {
+                                if (isadded) {
                                     FirebaseService.unregisterEventForUser(context, eventId!!) { isSuccess ->
                                         if (isSuccess) {
                                             Toast.makeText(
@@ -643,10 +672,10 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                             .padding(horizontal = 16.dp)
                             .fillMaxWidth()
                             .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (isRegistered) Color.Gray else Color.Red)
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isadded) Color.Gray else Color.Red)
                     ) {
                         Text(
-                            text = if (isRegistered) "Unregister" else "Register",
+                            text = if (isadded) "Remove from Calendar" else "Add to Calendar",
                             color = Color.White,
                             style = MaterialTheme.typography.bodyLarge
                         )

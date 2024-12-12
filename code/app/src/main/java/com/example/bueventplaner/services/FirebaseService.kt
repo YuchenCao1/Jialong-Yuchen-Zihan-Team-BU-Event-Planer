@@ -174,12 +174,12 @@ object FirebaseService {
         }
     }
 
-    fun registerEventForUser(context: Context, eventId: String, callback: (Boolean) -> Unit) {
+    fun addEventForUser(context: Context, eventId: String, callback: (Boolean) -> Unit) {
         if (!isOnline(context)) {
             callback(false)
             return
         }
-
+        
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             callback(false)
@@ -239,12 +239,12 @@ object FirebaseService {
         }
     }
 
-    fun unregisterEventForUser(context: Context, eventId: String, callback: (Boolean) -> Unit) {
+    fun removeEventForUser(context: Context, eventId: String, callback: (Boolean) -> Unit) {
         if (!isOnline(context)) {
             callback(false)
             return
         }
-
+        
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             callback(false)

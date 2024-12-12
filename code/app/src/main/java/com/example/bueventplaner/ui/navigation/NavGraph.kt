@@ -13,6 +13,8 @@ import com.example.bueventplaner.ui.pages.SignupPage
 import com.example.bueventplaner.ui.pages.OnboardingPage
 import com.example.bueventplaner.ui.pages.ProfilePage
 import com.example.bueventplaner.data.repository.EventDao
+import com.example.bueventplaner.ui.pages.CalendarRoute
+
 
 @Composable
 fun NavGraph(navController: NavHostController, eventDao: EventDao) {
@@ -26,5 +28,6 @@ fun NavGraph(navController: NavHostController, eventDao: EventDao) {
         }
         composable("onboarding") { OnboardingPage(navController) }
         composable("profile") { ProfilePage(navController = navController) }
+        composable("calendar") { CalendarRoute(navController) }
     }
 }
