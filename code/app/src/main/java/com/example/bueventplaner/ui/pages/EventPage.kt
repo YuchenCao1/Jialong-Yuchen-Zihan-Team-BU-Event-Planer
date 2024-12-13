@@ -690,7 +690,7 @@ fun EventLocationCardWithMap(
 
     val locationLatLng = LatLng(latitude, longitude)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(locationLatLng, 13f) // 默认缩放级别
+        position = CameraPosition.fromLatLngZoom(locationLatLng, 13f)
     }
 
     Column(
