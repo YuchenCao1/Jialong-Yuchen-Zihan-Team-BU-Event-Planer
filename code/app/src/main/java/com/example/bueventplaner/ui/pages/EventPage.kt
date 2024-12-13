@@ -43,27 +43,17 @@ import com.google.firebase.database.ktx.database
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.room.Room
-import com.example.bueventplaner.data.repository.EventDao
-import com.example.bueventplaner.data.repository.EventDatabase
-import kotlinx.coroutines.launch
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import androidx.core.content.ContextCompat.getSystemService
-import android.content.Context
-import com.example.bueventplaner.data.model.EventEntity
-import android.util.Log
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 
-fun isOnline(context: Context): Boolean {
-    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-    val networkInfo = connectivityManager.activeNetworkInfo
-    return networkInfo != null && networkInfo.isConnected
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EventListPage(navController: NavController, eventDao: EventDao) {
+fun EventListPage(navController: NavController) {
     val context = LocalContext.current
     var allEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
     var filteredEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
@@ -71,51 +61,12 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        // Collect cached events from Room
-        eventDao.getAllEvents().collect { cachedEvents ->
-            allEvents = cachedEvents.map { eventEntity ->
-                Event(
-                    id = eventEntity.id,
-                    title = eventEntity.title,
-                    description = eventEntity.description,
-                    location = eventEntity.location,
-                    startTime = eventEntity.startTime,
-                    endTime = eventEntity.endTime,
-                    photo = eventEntity.photo,
-                    eventUrl = eventEntity.eventUrl,
-                    savedUsers = eventEntity.savedUsers
-                )
-            }
-            filteredEvents = allEvents
+        FirebaseService.fetchEvents(context) { fetchedEvents ->
+            allEvents = fetchedEvents
+            filteredEvents = fetchedEvents
             isLoading = false
         }
-
-        // Fetch events from Firebase if online
-        if (isOnline(context)) {
-            FirebaseService.fetchEvents(context) { fetchedEvents ->
-                allEvents = fetchedEvents
-                filteredEvents = fetchedEvents
-                isLoading = false
-
-                // Update Room database
-                eventDao.insertEvents(fetchedEvents.map { event ->
-                    EventEntity(
-                        id = event.id,
-                        title = event.title,
-                        description = event.description,
-                        eventUrl = event.eventUrl,
-                        photo = event.photo,
-                        location = event.location,
-                        startTime = event.startTime,
-                        endTime = event.endTime,
-                        savedUsers = event.savedUsers
-                    )
-                })
-            }
-        }
     }
-
-
 
     LaunchedEffect(searchQuery) {
         filteredEvents = if (searchQuery.isEmpty()) {
@@ -141,34 +92,7 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
             )
         },
         bottomBar = {
-            BottomAppBar(containerColor = Color(0xFFF0F0F0),
-                modifier = Modifier.height(80.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { navController.navigate("event_list") }) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
-                        }
-                    }
-
-                    IconButton(onClick = { navController.navigate("calendar") }) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Calendar")
-                        }
-                    }
-
-                    IconButton(onClick = { navController.navigate("profile") }) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
-                        }
-                    }
-                }
-            }
+            BottomNavigationBar(navController = navController)
         },
         modifier = Modifier.background(color = Color.White)
     ) { innerPadding ->
@@ -357,7 +281,6 @@ fun CustomDotIndicator(
 fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
         BottomNavItem("Search", Icons.Default.Search, "event_list"),
-        BottomNavItem("Calendar", Icons.Default.CalendarToday, "calendar"),
         BottomNavItem("Profile", Icons.Default.Person, "profile")
     )
 
@@ -372,7 +295,7 @@ fun BottomNavigationBar(navController: NavController) {
                 selected = currentRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
+                        popUpTo(navController.graph.startDestinationId) {
                             saveState = true
                         }
                         launchSingleTop = true
@@ -394,75 +317,29 @@ fun currentRoute(navController: NavController): String? {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EventDetailsView(navController: NavController, eventId: String?, eventDao: EventDao) {
+fun EventDetailsView(navController: NavController, eventId: String?) {
     val context = LocalContext.current
     var event by remember { mutableStateOf<Event?>(null) }
     var isLoading by remember { mutableStateOf(true) }
-    var isadded by remember { mutableStateOf(false) }
-    val TAG = "MyDebugTag"
+    var isRegistered by remember { mutableStateOf(false) }
 
-    // Fetch event details and check add status
+    // Fetch event details and check registration status
     LaunchedEffect(eventId) {
-        eventId?.let { id ->
-            // Collect the event from Room database
-            eventDao.getEventById(id).collect { cachedEvent ->
-                event = cachedEvent?.let { entity ->
-                    Event(
-                        id = entity.id,
-                        title = entity.title,
-                        description = entity.description,
-                        eventUrl = entity.eventUrl,
-                        photo = entity.photo,
-                        location = entity.location,
-                        startTime = entity.startTime,
-                        endTime = entity.endTime,
-                        savedUsers = entity.savedUsers
-                    )
-                }
+        eventId?.let { it ->
+            FirebaseService.fetchEventById(context, it) { fetchedEvent ->
+                event = fetchedEvent
+                isLoading = false
 
-                if(isOnline(context)) {
-                    val currentUser = FirebaseAuth.getInstance().currentUser
-                    if (currentUser != null) {
-                        val userId = currentUser.uid
-                        val userRef = Firebase.database.reference.child("users").child(userId)
-                        userRef.child("savedEvents").get().addOnSuccessListener { snapshot ->
-                            // Use explicit type casting to avoid type inference issues
-                            val savedEvents = snapshot.value as? List<String> ?: emptyList()
-                            isadded = eventId in savedEvents
-                            Log.d(TAG, "Success in ED: ${isadded}")
-                        }.addOnFailureListener {
-                            Log.d(TAG, "Failed to fetch saved events in ED: ${it.message}")
-                        }
-                    }
-                }
-                isLoading = event == null // Show loading indicator if no cached event found
-            }
-
-            // If online, fetch latest event from Firebase
-            if (event == null && isOnline(context)) {
-                Log.d(TAG, "111")
-                FirebaseService.fetchEventById(context, id) { fetchedEvent ->
-                    event = fetchedEvent
-                    isLoading = false
-                    Log.d(TAG, "222")
-
-                    // Update Room database with the fetched event
-                    fetchedEvent?.let { entity ->
-                        eventDao.insertEvents(
-                            listOf(
-                                EventEntity(
-                                    id = entity.id,
-                                    title = entity.title,
-                                    description = entity.description,
-                                    eventUrl = entity.eventUrl,
-                                    photo = entity.photo,
-                                    location = entity.location,
-                                    startTime = entity.startTime,
-                                    endTime = entity.endTime,
-                                    savedUsers = entity.savedUsers
-                                )
-                            )
-                        )
+                val currentUser = FirebaseAuth.getInstance().currentUser
+                if (currentUser != null) {
+                    val userId = currentUser.uid
+                    val userRef = Firebase.database.reference.child("users").child(userId)
+                    userRef.child("savedEvents").get().addOnSuccessListener { snapshot ->
+                        // Use explicit type casting to avoid type inference issues
+                        val savedEvents = snapshot.value as? List<String> ?: emptyList()
+                        isRegistered = eventId in savedEvents
+                    }.addOnFailureListener {
+                        println("Failed to fetch saved events: ${it.message}")
                     }
                 }
             }
@@ -598,6 +475,14 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                             )
                             Spacer(modifier = Modifier.height(16.dp))
 
+                            // Event Location with Map
+                            EventLocationCardWithMap(
+                                title = eventDetails.title,
+                                address = eventDetails.location,
+                                latitude = 42.3601,
+                                longitude = -71.0589
+                            )
+
                             // Event Link
                             Text(
                                 text = "Learn More:",
@@ -624,46 +509,26 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                     }
                 }
                 item {
-                    // Display add Button
+                    // Display Register Button
                     Spacer(modifier = Modifier.height(24.dp))
                     Button(
                         onClick = {
-                            if (!isOnline(context)) {
-                                Toast.makeText(context, "You are offline. Please check your network connection.", Toast.LENGTH_SHORT).show()
-                            } else {
-                                if (isadded) {
-                                    FirebaseService.removeEventForUser(context, eventId!!) { isSuccess ->
-                                        if (isSuccess) {
-                                            Toast.makeText(
-                                                context,
-                                                "Event unregistered successfully!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            isadded = false
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                "Failed to unregister event. Please try again.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
+                            if (isRegistered) {
+                                FirebaseService.unregisterEventForUser(eventId!!) { isSuccess ->
+                                    if (isSuccess) {
+                                        Toast.makeText(context, "Event unregistered successfully!", Toast.LENGTH_SHORT).show()
+                                        isRegistered = false
+                                    } else {
+                                        Toast.makeText(context, "Failed to unregister event. Please try again.", Toast.LENGTH_SHORT).show()
                                     }
-                                } else {
-                                    FirebaseService.addEventForUser(context, eventId!!) { isSuccess ->
-                                        if (isSuccess) {
-                                            Toast.makeText(
-                                                context,
-                                                "Event registered successfully!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            isadded = true
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                "Failed to register event. Please try again.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
+                                }
+                            } else {
+                                FirebaseService.registerEventForUser(eventId!!) { isSuccess ->
+                                    if (isSuccess) {
+                                        Toast.makeText(context, "Event registered successfully!", Toast.LENGTH_SHORT).show()
+                                        isRegistered = true
+                                    } else {
+                                        Toast.makeText(context, "Failed to register event. Please try again.", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
@@ -672,10 +537,10 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                             .padding(horizontal = 16.dp)
                             .fillMaxWidth()
                             .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (isadded) Color.Gray else Color.Red)
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isRegistered) Color.Gray else Color.Red)
                     ) {
                         Text(
-                            text = if (isadded) "Remove from Calendar" else "Add to Calendar",
+                            text = if (isRegistered) "Unregister" else "Register",
                             color = Color.White,
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -699,3 +564,67 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
 
 
 
+@Composable
+fun EventLocationCardWithMap(
+    title: String,               //  "Mindshop Online Classroom"
+    address: String,             // "Boston, MA 00000"
+    latitude: Double,            //  42.3601
+    longitude: Double            //  -71.0589
+) {
+
+    val locationLatLng = LatLng(latitude, longitude)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(locationLatLng, 13f) // 默认缩放级别
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(6.dp)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), MaterialTheme.shapes.medium)
+    ) {
+
+        Column(modifier = Modifier.padding(8.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Location Icon",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = address,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Black
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+        ) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState
+            ) {
+                Marker(
+                    state = MarkerState(position = locationLatLng),
+                    title = title,
+                    snippet = address
+                )
+            }
+
+        }
+
+
+    }
+}
