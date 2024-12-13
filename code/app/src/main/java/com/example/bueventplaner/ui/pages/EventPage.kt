@@ -40,6 +40,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.ktx.database
+import android.content.res.Configuration
+import androidx.compose.ui.platform.LocalConfiguration
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -230,7 +232,7 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
                 }
 
                 items(filteredEvents) { event ->
-                    EventCard(
+                    Single(
                         title = event.title,
                         date = "${event.startTime} - ${event.endTime}",
                         location = event.location,
@@ -357,6 +359,36 @@ fun CustomDotIndicator(
     }
 }
 
+@Composable
+fun BottomNavigationBar(navController: NavController) {
+    val items = listOf(
+        BottomNavItem("Search", Icons.Default.Search, "event_list"),
+        BottomNavItem("Profile", Icons.Default.Person, "profile")
+    )
+
+    NavigationBar(
+        containerColor = Color(0xFFF0F0F0)
+    ) {
+        val currentRoute = currentRoute(navController)
+        items.forEach { item ->
+            NavigationBarItem(
+                icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
+                label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
+                selected = currentRoute == item.route,
+                onClick = {
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
+    }
+}
+
 data class BottomNavItem(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val route: String)
 
 @Composable
@@ -373,6 +405,9 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
     var isLoading by remember { mutableStateOf(true) }
     var isadded by remember { mutableStateOf(false) }
     val TAG = "MyDebugTag"
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Fetch event details and check add status
     LaunchedEffect(eventId) {
@@ -481,70 +516,53 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
             }
         } else if (event != null) {
             val eventDetails = event!!
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                item {
-                    // Event Image
+
+            if (isLandscape) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
                     if (eventDetails.photo.isNotEmpty()) {
                         AsyncImage(
-                            model = eventDetails.photo, // Full image URL from Firebase Storage
+                            model = eventDetails.photo,
                             contentDescription = "Event Image",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(240.dp)
+                                .fillMaxHeight()
+                                .weight(1f)
                         )
                     } else {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(240.dp)
+                                .fillMaxHeight()
+                                .weight(1f)
                                 .background(Color.Gray),
                             contentAlignment = Alignment.Center
                         ) {
                             Text("Image not available", color = Color.White)
                         }
                     }
-                }
-                item {
-                    // Event Details in a Card with Border
-                    Card(
+
+                    LazyColumn(
                         modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
                             .padding(16.dp)
-                            .fillMaxWidth()
-                            .border(
-                                width = 1.dp,
-                                color = Color(0xFFE0E0E0),
-                                shape = RoundedCornerShape(8.dp)
-                            ),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) {
-                            // Event Title
+                        item {
                             Text(
                                 text = eventDetails.title,
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-
-                            // Event Dates
                             Text(
                                 text = "Date: ${eventDetails.startTime} - ${eventDetails.endTime}",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-
-                            // Event Description
                             Text(
                                 text = "Description:",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -557,8 +575,6 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                                 lineHeight = 20.sp
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-
-                            // Event Location
                             Text(
                                 text = "Location:",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -570,16 +586,13 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-
-                            // Event Location with Map
                             EventLocationCardWithMap(
                                 title = eventDetails.title,
                                 address = eventDetails.location,
                                 latitude = 42.3601,
                                 longitude = -71.0589
                             )
-
-                            // Event Link
+                            Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = "Learn More:",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -601,67 +614,193 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                                     }
                                 }
                             )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = {
+                                    if (isadded) {
+                                        FirebaseService.removeEventForUser(context, eventId!!) { isSuccess ->
+                                            if (isSuccess) {
+                                                Toast.makeText(context, "Event unregistered successfully!", Toast.LENGTH_SHORT).show()
+                                                isadded = false
+                                            } else {
+                                                Toast.makeText(context, "Failed to unregister event. Please try again.", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    } else {
+                                        FirebaseService.removeEventForUser(context, eventId!!) { isSuccess ->
+                                            if (isSuccess) {
+                                                Toast.makeText(context, "Event registered successfully!", Toast.LENGTH_SHORT).show()
+                                                isadded = true
+                                            } else {
+                                                Toast.makeText(context, "Failed to register event. Please try again.", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = if (isadded) Color.Gray else Color.Red)
+                            ) {
+                                Text(
+                                    text = if (isadded) "Unregister" else "Register",
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
                         }
                     }
                 }
-                item {
-                    // Display add Button
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = {
-                            if (!isOnline(context)) {
-                                Toast.makeText(context, "You are offline. Please check your network connection.", Toast.LENGTH_SHORT).show()
-                            } else {
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    item {
+                        if (eventDetails.photo.isNotEmpty()) {
+                            AsyncImage(
+                                model = eventDetails.photo,
+                                contentDescription = "Event Image",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(240.dp)
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(240.dp)
+                                    .background(Color.Gray),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Image not available", color = Color.White)
+                            }
+                        }
+                    }
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth()
+                                .border(
+                                    width = 1.dp,
+                                    color = Color(0xFFE0E0E0),
+                                    shape = RoundedCornerShape(8.dp)
+                                ),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = eventDetails.title,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Date: ${eventDetails.startTime} - ${eventDetails.endTime}",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Description:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = eventDetails.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    lineHeight = 20.sp
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Location:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = eventDetails.location,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                EventLocationCardWithMap(
+                                    title = eventDetails.title,
+                                    address = eventDetails.location,
+                                    latitude = 42.3601,
+                                    longitude = -71.0589
+                                )
+
+                                Text(
+                                    text = "Learn More:",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = eventDetails.eventUrl,
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = Color.Blue, textDecoration = TextDecoration.Underline),
+                                    modifier = Modifier.clickable {
+                                        val url = eventDetails.eventUrl
+                                        if (url.isNotEmpty() && Uri.parse(url).isAbsolute) {
+                                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                data = Uri.parse(url)
+                                            }
+                                            context.startActivity(intent)
+                                        } else {
+                                            Toast.makeText(context, "Invalid URL", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = {
                                 if (isadded) {
                                     FirebaseService.removeEventForUser(context, eventId!!) { isSuccess ->
                                         if (isSuccess) {
-                                            Toast.makeText(
-                                                context,
-                                                "Event unregistered successfully!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                            Toast.makeText(context, "Event unregistered successfully!", Toast.LENGTH_SHORT).show()
                                             isadded = false
                                         } else {
-                                            Toast.makeText(
-                                                context,
-                                                "Failed to unregister event. Please try again.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                            Toast.makeText(context, "Failed to unregister event. Please try again.", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 } else {
-                                    FirebaseService.addEventForUser(context, eventId!!) { isSuccess ->
+                                    FirebaseService.removeEventForUser(context, eventId!!) { isSuccess ->
                                         if (isSuccess) {
-                                            Toast.makeText(
-                                                context,
-                                                "Event registered successfully!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                            Toast.makeText(context, "Event registered successfully!", Toast.LENGTH_SHORT).show()
                                             isadded = true
                                         } else {
-                                            Toast.makeText(
-                                                context,
-                                                "Failed to register event. Please try again.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                            Toast.makeText(context, "Failed to register event. Please try again.", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 }
-                            }
-                        },
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp)
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (isadded) Color.Gray else Color.Red)
-                    ) {
-                        Text(
-                            text = if (isadded) "Remove from Calendar" else "Add to Calendar",
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                            },
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isadded) Color.Gray else Color.Red)
+                        ) {
+                            Text(
+                                text = if (isadded) "Unregister" else "Register",
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
                     }
-
                 }
             }
         } else {
@@ -678,6 +817,90 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
 }
 
 
+@Composable
+fun Single(
+    title: String,
+    date: String,
+    location: String,
+    photoPath: String,
+    onClick: () -> Unit
+) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        if (isLandscape) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                if (photoPath.isNotEmpty()) {
+                    AsyncImage(
+                        model = photoPath,
+                        contentDescription = "Event Image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .width(150.dp)
+                            .height(150.dp)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .width(150.dp)
+                            .height(150.dp)
+                            .background(Color.Gray),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Loading...", style = MaterialTheme.typography.bodySmall, color = Color.White)
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                        .align(Alignment.CenterVertically)
+                ) {
+                    Text(text = title, style = MaterialTheme.typography.titleMedium)
+                    Text(text = date, style = MaterialTheme.typography.bodySmall)
+                    Text(text = location, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        } else {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                if (photoPath.isNotEmpty()) {
+                    AsyncImage(
+                        model = photoPath,
+                        contentDescription = "Event Image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .background(Color.Gray),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Loading...", style = MaterialTheme.typography.bodySmall, color = Color.White)
+                    }
+                }
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = title, style = MaterialTheme.typography.titleMedium)
+                    Text(text = date, style = MaterialTheme.typography.bodySmall)
+                    Text(text = location, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
 
 
 @Composable
