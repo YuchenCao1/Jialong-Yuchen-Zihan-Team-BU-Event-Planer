@@ -357,37 +357,6 @@ fun CustomDotIndicator(
     }
 }
 
-@Composable
-fun BottomNavigationBar(navController: NavController) {
-    val items = listOf(
-        BottomNavItem("Search", Icons.Default.Search, "event_list"),
-        BottomNavItem("Calendar", Icons.Default.CalendarToday, "calendar"),
-        BottomNavItem("Profile", Icons.Default.Person, "profile")
-    )
-
-    NavigationBar(
-        containerColor = Color(0xFFF0F0F0)
-    ) {
-        val currentRoute = currentRoute(navController)
-        items.forEach { item ->
-            NavigationBarItem(
-                icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
-                label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
-                selected = currentRoute == item.route,
-                onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
-            )
-        }
-    }
-}
-
 data class BottomNavItem(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val route: String)
 
 @Composable
