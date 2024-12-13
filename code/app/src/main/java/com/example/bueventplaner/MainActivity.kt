@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import android.content.Context
 import com.example.bueventplaner.data.repository.EventDatabase
 
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

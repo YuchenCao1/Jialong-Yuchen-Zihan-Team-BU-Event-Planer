@@ -43,6 +43,12 @@ import com.google.firebase.database.ktx.database
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 import androidx.room.Room
 import com.example.bueventplaner.data.repository.EventDao
 import com.example.bueventplaner.data.repository.EventDatabase
@@ -114,8 +120,6 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
             }
         }
     }
-
-
 
     LaunchedEffect(searchQuery) {
         filteredEvents = if (searchQuery.isEmpty()) {
@@ -598,6 +602,14 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                             )
                             Spacer(modifier = Modifier.height(16.dp))
 
+                            // Event Location with Map
+                            EventLocationCardWithMap(
+                                title = eventDetails.title,
+                                address = eventDetails.location,
+                                latitude = 42.3601,
+                                longitude = -71.0589
+                            )
+
                             // Event Link
                             Text(
                                 text = "Learn More:",
@@ -699,3 +711,67 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
 
 
 
+@Composable
+fun EventLocationCardWithMap(
+    title: String,               //  "Mindshop Online Classroom"
+    address: String,             // "Boston, MA 00000"
+    latitude: Double,            //  42.3601
+    longitude: Double            //  -71.0589
+) {
+
+    val locationLatLng = LatLng(latitude, longitude)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(locationLatLng, 13f) // 默认缩放级别
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(6.dp)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), MaterialTheme.shapes.medium)
+    ) {
+
+        Column(modifier = Modifier.padding(8.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = "Location Icon",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = address,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Black
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+        ) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState
+            ) {
+                Marker(
+                    state = MarkerState(position = locationLatLng),
+                    title = title,
+                    snippet = address
+                )
+            }
+
+        }
+
+
+    }
+}

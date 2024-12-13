@@ -52,6 +52,7 @@ android {
 }
 
 dependencies {
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -104,6 +105,10 @@ dependencies {
     implementation ("com.google.android.gms:play-services-auth:20.7.0")
     implementation ("com.google.firebase:firebase-auth-ktx:22.1.1")
 
+
+    implementation ("com.google.maps.android:maps-compose:2.11.0")
+    implementation ("com.google.android.gms:play-services-maps:18.1.0")
+
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     kapt(libs.room.compiler)
@@ -113,7 +118,6 @@ dependencies {
     kapt("androidx.room:room-compiler:2.5.2")
 
     implementation ("com.google.code.gson:gson:2.9.0")
-
     implementation ("io.github.boguszpawlowski.composecalendar:composecalendar:1.3.0")
     implementation ("io.github.boguszpawlowski.composecalendar:kotlinx-datetime:1.3.0")
 

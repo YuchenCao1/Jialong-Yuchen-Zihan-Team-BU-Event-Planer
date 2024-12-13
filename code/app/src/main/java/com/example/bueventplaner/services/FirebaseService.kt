@@ -179,7 +179,7 @@ object FirebaseService {
             callback(false)
             return
         }
-        
+
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             callback(false)
@@ -244,7 +244,7 @@ object FirebaseService {
             callback(false)
             return
         }
-        
+
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser == null) {
             callback(false)
@@ -337,7 +337,7 @@ object FirebaseService {
                 onResult(false)
             }
     }
-    
+
     fun fetchUserSavedEvents(userSavedEvents: MutableList<Event>) {
         val currentUser = FirebaseAuth.getInstance().currentUser ?: return
 
