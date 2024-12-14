@@ -20,6 +20,7 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        buildConfigField("String", "MAPS_API_KEY", "\"${project.findProperty("MAPS_API_KEY") ?: ""}\"")
     }
 
     buildTypes {
@@ -40,6 +41,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -118,5 +120,15 @@ dependencies {
     implementation ("io.github.boguszpawlowski.composecalendar:kotlinx-datetime:1.3.0")
     implementation ("com.squareup.retrofit2:retrofit:2.9.0")
     implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
-
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.6") {
+        version {
+            strictly("1.6.6")
+        }
+    }
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0")
+    configurations.all {
+        resolutionStrategy {
+            force("androidx.test.espresso:espresso-core:3.5.0")
+        }
+    }
 }

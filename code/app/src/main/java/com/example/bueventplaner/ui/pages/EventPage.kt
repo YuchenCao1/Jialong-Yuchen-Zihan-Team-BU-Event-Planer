@@ -55,6 +55,7 @@ import com.example.bueventplaner.data.repository.EventDao
 import android.content.Context
 import com.example.bueventplaner.data.model.EventEntity
 import android.util.Log
+import com.example.bueventplaner.BuildConfig
 
 
 fun isOnline(context: Context): Boolean {
@@ -555,7 +556,7 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                             EventLocationCardWithMap(
                                 title = eventDetails.title,
                                 address = eventDetails.location,
-                                apiKey = "AIzaSyAWia3UqzRGsB57cFwuJEJouj4M8z9CM0k"
+                                apiKey = BuildConfig.MAPS_API_KEY
                             )
 
                             // Event Link
