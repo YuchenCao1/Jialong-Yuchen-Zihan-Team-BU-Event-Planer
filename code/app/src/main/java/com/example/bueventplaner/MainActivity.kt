@@ -15,6 +15,7 @@ import com.example.bueventplaner.data.repository.EventDatabase
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             MyApp(context = applicationContext)
         }

@@ -31,6 +31,11 @@ import com.example.bueventplaner.ui.component.EventCard
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
+private val eventDateTimeParser = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -235,27 +240,43 @@ fun ProfileHeader(
 @Composable
 fun TabSection(navController: NavController, userSavedEvents: MutableList<Event>, modifier: Modifier = Modifier) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    val currentTime = System.currentTimeMillis()
+
+    val passedEvents = userSavedEvents.filter { event ->
+        val eventEndTime = LocalDateTime.parse(event.endTime, eventDateTimeParser)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+        eventEndTime < currentTime
+    }
+
+    val upcomingEvents = userSavedEvents.filter { event ->
+        val eventStartTime = LocalDateTime.parse(event.startTime, eventDateTimeParser)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+        eventStartTime >= currentTime
+    }
+
 
     Column(modifier = modifier) {
         TabRow(selectedTabIndex = selectedTab) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Reviewed") })
+            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Passed") })
             Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Upcoming") })
         }
 
         when (selectedTab) {
-            0 -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No events reviewed.", style = MaterialTheme.typography.bodyLarge)
-            }
-            1 -> EventList(navController, events = userSavedEvents)
+            0 -> EventList(navController, events = passedEvents, emptyMessage = "No passed events.")
+            1 -> EventList(navController, events = upcomingEvents, emptyMessage = "No upcoming events.")
         }
     }
 }
 
 @Composable
-fun EventList(navController: NavController, events: List<Event>) {
+fun EventList(navController: NavController, events: List<Event>, emptyMessage: String) {
     if (events.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No events found.", color = MaterialTheme.colorScheme.onBackground)
+            Text(emptyMessage, color = MaterialTheme.colorScheme.onBackground)
         }
     } else {
         LazyColumn(contentPadding = PaddingValues(16.dp)) {

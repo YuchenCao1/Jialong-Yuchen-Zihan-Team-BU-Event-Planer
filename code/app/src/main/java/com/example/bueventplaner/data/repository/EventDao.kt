@@ -21,5 +21,6 @@ interface EventDao {
 
     @Query("DELETE FROM event_table")
     fun deleteAllEvents()
+
 }
 

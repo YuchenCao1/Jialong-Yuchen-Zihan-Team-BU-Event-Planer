@@ -94,7 +94,7 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
 
         // Fetch events from Firebase if online
         if (isOnline(context)) {
-            FirebaseService.fetchEvents(context) { fetchedEvents ->
+            FirebaseService.fetchAndSyncEvents(context) { fetchedEvents ->
                 allEvents = fetchedEvents
                 filteredEvents = fetchedEvents
                 isLoading = false
@@ -134,7 +134,13 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
             TopAppBar(
                 title = { Text("Explore", style = MaterialTheme.typography.titleLarge) },
                 actions = {
-                    IconButton(onClick = { navController.navigate("profile") }) {
+                    IconButton(onClick = {
+                        if (isOnline(context)) {
+                            navController.navigate("profile")
+                        } else {
+                            Toast.makeText(context, "No network connection. Please connect to the internet.", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
                         Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
                     }
                 }
@@ -142,7 +148,7 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
         },
         bottomBar = {
             BottomAppBar(containerColor = Color(0xFFF0F0F0),
-                modifier = Modifier.height(80.dp)) {
+                modifier = Modifier.height(50.dp)) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -156,13 +162,25 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
                         }
                     }
 
-                    IconButton(onClick = { navController.navigate("calendar") }) {
+                    IconButton(onClick = {
+                        if (isOnline(context)) {
+                            navController.navigate("calendar")
+                        } else {
+                            Toast.makeText(context, "No network connection. Please connect to the internet.", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Calendar")
                         }
                     }
 
-                    IconButton(onClick = { navController.navigate("profile") }) {
+                    IconButton(onClick = {
+                        if (isOnline(context)) {
+                            navController.navigate("profile")
+                        } else {
+                            Toast.makeText(context, "No network connection. Please connect to the internet.", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(imageVector = Icons.Default.Person, contentDescription = "Profile")
                         }
@@ -218,7 +236,7 @@ fun EventListPage(navController: NavController, eventDao: EventDao) {
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Recommended For You",
+                            text = "All Events",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
@@ -438,7 +456,7 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
             TopAppBar(
                 title = {
                     Text(
-                        text = event?.title ?: "Event Details",
+                        text = "Event Details",
                         style = MaterialTheme.typography.titleLarge
                     )
                 },
@@ -447,14 +465,6 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* Share Action */ }) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share"
                         )
                     }
                 }
@@ -576,19 +586,19 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                                     if (isadded) {
                                         FirebaseService.removeEventForUser(context, eventId!!) { isSuccess ->
                                             if (isSuccess) {
-                                                Toast.makeText(context, "Event unregistered successfully!", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "Event removed successfully!", Toast.LENGTH_SHORT).show()
                                                 isadded = false
                                             } else {
-                                                Toast.makeText(context, "Failed to unregister event. Please try again.", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "No network connection. Please connect to the internet.", Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     } else {
-                                        FirebaseService.removeEventForUser(context, eventId!!) { isSuccess ->
+                                        FirebaseService.addEventForUser(context, eventId!!) { isSuccess ->
                                             if (isSuccess) {
-                                                Toast.makeText(context, "Event registered successfully!", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "Event added successfully!", Toast.LENGTH_SHORT).show()
                                                 isadded = true
                                             } else {
-                                                Toast.makeText(context, "Failed to register event. Please try again.", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "No network connection. Please connect to the internet.", Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     }
@@ -599,7 +609,7 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                                 colors = ButtonDefaults.buttonColors(containerColor = if (isadded) Color.Gray else Color.Red)
                             ) {
                                 Text(
-                                    text = if (isadded) "Unregister" else "Register",
+                                    text = if (isadded) "Remove from Calendar" else "Add to Calendar",
                                     color = Color.White,
                                     style = MaterialTheme.typography.bodyLarge
                                 )
@@ -692,8 +702,7 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                                 EventLocationCardWithMap(
                                     title = eventDetails.title,
                                     address = eventDetails.location,
-                                    latitude = 42.3601,
-                                    longitude = -71.0589
+                                    apiKey = "AIzaSyAWia3UqzRGsB57cFwuJEJouj4M8z9CM0k"
                                 )
 
                                 Text(
@@ -727,19 +736,19 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                                 if (isadded) {
                                     FirebaseService.removeEventForUser(context, eventId!!) { isSuccess ->
                                         if (isSuccess) {
-                                            Toast.makeText(context, "Event unregistered successfully!", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Event removed successfully!", Toast.LENGTH_SHORT).show()
                                             isadded = false
                                         } else {
-                                            Toast.makeText(context, "Failed to unregister event. Please try again.", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "No network connection. Please connect to the internet.", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 } else {
-                                    FirebaseService.removeEventForUser(context, eventId!!) { isSuccess ->
+                                    FirebaseService.addEventForUser(context, eventId!!) { isSuccess ->
                                         if (isSuccess) {
-                                            Toast.makeText(context, "Event registered successfully!", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Event added successfully!", Toast.LENGTH_SHORT).show()
                                             isadded = true
                                         } else {
-                                            Toast.makeText(context, "Failed to register event. Please try again.", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "No network connection. Please connect to the internet.", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 }
@@ -751,7 +760,7 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                             colors = ButtonDefaults.buttonColors(containerColor = if (isadded) Color.Gray else Color.Red)
                         ) {
                             Text(
-                                text = if (isadded) "Unregister" else "Register",
+                                text = if (isadded) "Remove from Calendar" else "Add to Calendar",
                                 color = Color.White,
                                 style = MaterialTheme.typography.bodyLarge
                             )

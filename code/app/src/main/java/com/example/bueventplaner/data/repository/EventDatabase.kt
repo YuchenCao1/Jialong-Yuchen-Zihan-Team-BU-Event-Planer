@@ -40,6 +40,10 @@ abstract class EventDatabase : RoomDatabase() {
                 instance
             }
         }
+
+        fun clearRoomDatabase(eventDao: EventDao) {
+            eventDao.deleteAllEvents()
+        }
     }
 
 }

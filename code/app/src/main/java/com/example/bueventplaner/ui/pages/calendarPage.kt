@@ -325,7 +325,7 @@ fun EventItem(navController: NavController,event: Event) {
 
         // Add to Google Calendar button
         Button(
-            onClick = { context.addEventToGoogleCalendar(event) },
+            onClick = { context.addEventToGoogleCalendar(context, event) },
             modifier = Modifier.padding(top = 8.dp)
         ) {
             Text("Add to Google Calendar")
@@ -344,7 +344,7 @@ fun formatEventTime(startTime: String, endTime: String): String {
     return "${startDateTime.format(formatter)} - ${endDateTime.format(formatter)}"
 }
 
-fun Context.addEventToGoogleCalendar(event: Event) {
+fun Context.addEventToGoogleCalendar(context: Context, event: Event) {
     val startDateTime = LocalDateTime.parse(event.startTime, eventDateTimeParser)
     val endDateTime = LocalDateTime.parse(event.endTime, eventDateTimeParser)
 
@@ -361,10 +361,10 @@ fun Context.addEventToGoogleCalendar(event: Event) {
         putExtra(CalendarContract.Events.DESCRIPTION, event.description)
     }
 
-    if (intent.resolveActivity(packageManager) != null) {
-        startActivity(intent)
-    } else {
-        Toast.makeText(this, "No calendar app found.", Toast.LENGTH_SHORT).show()
+    try {
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Failed to open calendar.", Toast.LENGTH_SHORT).show()
     }
 }
 @Composable
@@ -374,7 +374,7 @@ fun CalendarRoute(navController: NavController) {
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        FirebaseService.fetchEvents(context) { fetchedEvents ->
+        FirebaseService.fetchAndSyncEvents(context) { fetchedEvents ->
             allEvents = fetchedEvents
             isLoading = false
         }
