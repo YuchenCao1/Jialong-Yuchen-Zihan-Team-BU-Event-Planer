@@ -29,9 +29,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.*
 import coil.compose.AsyncImage
 import com.example.bueventplaner.services.FirebaseService
+import com.example.bueventplaner.services.RetrofitInstance
 import com.example.bueventplaner.data.model.Event
 import com.example.bueventplaner.ui.component.EventCard
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,17 +49,11 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import androidx.room.Room
 import com.example.bueventplaner.data.repository.EventDao
-import com.example.bueventplaner.data.repository.EventDatabase
-import kotlinx.coroutines.launch
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import androidx.core.content.ContextCompat.getSystemService
 import android.content.Context
 import com.example.bueventplaner.data.model.EventEntity
 import android.util.Log
-import androidx.navigation.NavGraph.Companion.findStartDestination
+
 
 fun isOnline(context: Context): Boolean {
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
@@ -357,13 +351,6 @@ fun CustomDotIndicator(
     }
 }
 
-data class BottomNavItem(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val route: String)
-
-@Composable
-fun currentRoute(navController: NavController): String? {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    return navBackStackEntry?.destination?.route
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -372,7 +359,7 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
     var event by remember { mutableStateOf<Event?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var isadded by remember { mutableStateOf(false) }
-    val TAG = "MyDebugTag"
+    val tag = "MyDebugTag"
 
     // Fetch event details and check add status
     LaunchedEffect(eventId) {
@@ -402,9 +389,9 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                             // Use explicit type casting to avoid type inference issues
                             val savedEvents = snapshot.value as? List<String> ?: emptyList()
                             isadded = eventId in savedEvents
-                            Log.d(TAG, "Success in ED: ${isadded}")
+                            Log.d(tag, "Success in ED: $isadded")
                         }.addOnFailureListener {
-                            Log.d(TAG, "Failed to fetch saved events in ED: ${it.message}")
+                            Log.d(tag, "Failed to fetch saved events in ED: ${it.message}")
                         }
                     }
                 }
@@ -413,11 +400,11 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
 
             // If online, fetch latest event from Firebase
             if (event == null && isOnline(context)) {
-                Log.d(TAG, "111")
+                Log.d(tag, "111")
                 FirebaseService.fetchEventById(context, id) { fetchedEvent ->
                     event = fetchedEvent
                     isLoading = false
-                    Log.d(TAG, "222")
+                    Log.d(tag, "222")
 
                     // Update Room database with the fetched event
                     fetchedEvent?.let { entity ->
@@ -575,9 +562,9 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                             EventLocationCardWithMap(
                                 title = eventDetails.title,
                                 address = eventDetails.location,
-                                latitude = 42.3601,
-                                longitude = -71.0589
+                                apiKey = "AIzaSyAWia3UqzRGsB57cFwuJEJouj4M8z9CM0k"
                             )
+
 
                             // Event Link
                             Text(
@@ -682,15 +669,33 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
 
 @Composable
 fun EventLocationCardWithMap(
-    title: String,               //  "Mindshop Online Classroom"
-    address: String,             // "Boston, MA 00000"
-    latitude: Double,            //  42.3601
-    longitude: Double            //  -71.0589
+    title: String,
+    address: String,
+    apiKey: String
 ) {
+    var locationLatLng by remember { mutableStateOf<LatLng?>(null) }
+    val cameraPositionState = rememberCameraPositionState()
 
-    val locationLatLng = LatLng(latitude, longitude)
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(locationLatLng, 13f)
+    LaunchedEffect(address) {
+        try {
+            val response = RetrofitInstance.geocodingService.getGeocode(address, apiKey)
+
+            val location = response.results.firstOrNull()?.geometry?.location
+
+            if (location != null) {
+                val googleLatLng = LatLng(location.lat, location.lng)
+                locationLatLng = googleLatLng
+
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(
+                    googleLatLng,
+                    13f
+                )
+            } else {
+                println("No location found for the given address.")
+            }
+        } catch (e: Exception) {
+            println("Error fetching geocode: ${e.localizedMessage}")
+        }
     }
 
     Column(
@@ -699,7 +704,6 @@ fun EventLocationCardWithMap(
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), MaterialTheme.shapes.medium)
     ) {
-
         Column(modifier = Modifier.padding(8.dp)) {
             Text(
                 text = title,
@@ -723,24 +727,34 @@ fun EventLocationCardWithMap(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(150.dp)
-        ) {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState
+        if (locationLatLng != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
             ) {
-                Marker(
-                    state = MarkerState(position = locationLatLng),
-                    title = title,
-                    snippet = address
-                )
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState
+                ) {
+                    Marker(
+                        state = MarkerState(position = LatLng(locationLatLng!!.latitude, locationLatLng!!.longitude)),
+
+                        title = title,
+                        snippet = address
+                    )
+                }
             }
-
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
         }
-
-
     }
 }
+

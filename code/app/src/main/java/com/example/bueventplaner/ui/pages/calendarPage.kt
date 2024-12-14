@@ -10,26 +10,31 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.bueventplaner.R
 import com.example.bueventplaner.data.model.Event
 import com.example.bueventplaner.services.FirebaseService
-import io.github.boguszpawlowski.composecalendar.Calendar
-import io.github.boguszpawlowski.composecalendar.day.Day
-import io.github.boguszpawlowski.composecalendar.rememberCalendarState
+import com.example.bueventplaner.ui.component.EventCard
 import java.time.*
 import java.time.format.DateTimeFormatter
+import com.google.accompanist.pager.HorizontalPager
+import com.google.firebase.auth.FirebaseAuth
+import android.content.res.Configuration
+
 
 
 private val eventDateTimeParser = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
@@ -45,20 +50,24 @@ fun CalendarPage(
     navController: NavController,
     addedEvents: List<Event>
 ) {
-    val calendarState = rememberCalendarState(
-        initialMonth = YearMonth.now()
-    )
-
+    var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     val eventsByDate = remember(addedEvents) {
         addedEvents.groupBy { it.startLocalDate() }
     }
-
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "My Events Calendar", fontSize = 20.sp) },
+                title = {
+                    Text(
+                        text = currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigate("event_list") }) {
                         Icon(
@@ -66,6 +75,16 @@ fun CalendarPage(
                             contentDescription = "Back",
                             modifier = Modifier.size(24.dp)
                         )
+                    }
+                },
+                actions = {
+                    Row {
+                        IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
+                            Icon(imageVector = Icons.Default.ChevronLeft, contentDescription = "Previous Month")
+                        }
+                        IconButton(onClick = { currentMonth = currentMonth.plusMonths(1) }) {
+                            Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Next Month")
+                        }
                     }
                 }
             )
@@ -76,89 +95,47 @@ fun CalendarPage(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            Text(
-                text = "Select a date to view added events",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(16.dp)
-            )
-
-            // Ensure the Calendar takes enough vertical space
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f) // Let the calendar fill the available vertical space
-            ) {
-                Calendar(
-                    calendarState = calendarState,
-                    dayContent = { day: Day ->
-                        val date = day.date
-                        val dayEvents = eventsByDate[date] ?: emptyList()
-
-                        val backgroundColor = when {
-                            day.isCurrentDay -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
-                            !day.isFromCurrentMonth -> Color.LightGray.copy(alpha = 0.5f)
-                            else -> Color.Transparent
-                        }
-
-                        val maxVisibleEvents = 3
-
-                        Column(
-                            modifier = Modifier
-                                .padding(4.dp)
-                                .background(color = backgroundColor, shape = RoundedCornerShape(8.dp))
-                                .fillMaxSize()
-                                .clickable {
-                                    selectedDate = date
-                                },
-                            verticalArrangement = Arrangement.Top,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = date.dayOfMonth.toString(),
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-
-                            LazyColumn(
-                                verticalArrangement = Arrangement.spacedBy(2.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(60.dp) // Adjust height if needed
-                            ) {
-                                items(dayEvents.take(maxVisibleEvents)) { event ->
-                                    EventChip(event = event)
-                                }
-
-                                if (dayEvents.size > maxVisibleEvents) {
-                                    item {
-                                        Text(
-                                            text = "+${dayEvents.size - maxVisibleEvents} more",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color.Gray
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+            if (isPortrait) {
+                // Portrait Layout
+                WeeklyCalendarView(
+                    currentMonth = currentMonth,
+                    eventsByDate = eventsByDate,
+                    onDateSelected = { selectedDate = it },
+                    modifier = Modifier.weight(1f)
                 )
-            }
-
-            val eventsToday = selectedDate?.let { eventsByDate[it] } ?: emptyList()
-
-            LazyColumn(contentPadding = PaddingValues(16.dp)) {
-                if (eventsToday.isEmpty()) {
-                    item {
-                        Text(
-                            text = "No events on this day.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center
+                EventListForSelectedDate(
+                    navController = navController,
+                    selectedDate = selectedDate,
+                    eventsByDate = eventsByDate,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                // Landscape Layout
+                Row(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) {
+                        WeeklyCalendarView(
+                            currentMonth = currentMonth,
+                            eventsByDate = eventsByDate,
+                            onDateSelected = { selectedDate = it },
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
-                } else {
-                    items(eventsToday) { event ->
-                        EventItem(event = event)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .background(MaterialTheme.colorScheme.background)
+                    ) {
+                        EventListForSelectedDate(
+                            navController = navController,
+                            selectedDate = selectedDate,
+                            eventsByDate = eventsByDate,
+                            modifier = Modifier.fillMaxHeight()
+                        )
                     }
                 }
             }
@@ -166,10 +143,150 @@ fun CalendarPage(
     }
 }
 
+@Composable
+fun WeeklyCalendarView(
+    currentMonth: YearMonth,
+    eventsByDate: Map<LocalDate, List<Event>>,
+    onDateSelected: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val weeksInMonth = getWeeksInMonth(currentMonth)
+
+    HorizontalPager(
+        count = weeksInMonth.size,
+        modifier = modifier
+            .fillMaxWidth()
+    ) { pageIndex ->
+        val weekDates = weeksInMonth[pageIndex]
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            weekDates.forEach { date ->
+                val dayEvents = eventsByDate[date] ?: emptyList()
+
+                val backgroundColor = when {
+                    date == LocalDate.now() -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+                    else -> Color.Transparent
+                }
+
+                Column(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .background(color = backgroundColor, shape = RoundedCornerShape(8.dp))
+                        .clickable { onDateSelected(date) }
+                        .weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = date.dayOfWeek.name.take(3), // Day name (e.g., Mon)
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                    Text(
+                        text = date.dayOfMonth.toString(), // Day number
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .weight(1f),
+
+                    ) {
+                        items(dayEvents.take(3)) { event ->
+                            EventChip(event = event)
+                        }
+
+                        if (dayEvents.size > 3) {
+                            item {
+                                Text(
+                                    text = "+${dayEvents.size - 3} more",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EventListForSelectedDate(navController: NavController,
+    selectedDate: LocalDate?,
+    eventsByDate: Map<LocalDate, List<Event>>,
+    modifier: Modifier = Modifier
+) {
+    val eventsToday = selectedDate?.let { eventsByDate[it] } ?: emptyList()
+
+    Box(
+        modifier = modifier.padding(16.dp)
+    ) {
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            if (eventsToday.isEmpty()) {
+                item {
+                    Text(
+                        text = "No events on this day.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                items(eventsToday) { event ->
+                    EventItem(navController,event = event)
+                }
+            }
+        }
+    }
+}
+
+
+
+// Helper Function to Generate Weeks for a Month
+fun getWeeksInMonth(currentMonth: YearMonth): List<List<LocalDate>> {
+    val firstDayOfMonth = currentMonth.atDay(1)
+    val lastDayOfMonth = currentMonth.atEndOfMonth()
+
+    val weeks = mutableListOf<List<LocalDate>>()
+    var currentWeek = mutableListOf<LocalDate>()
+    var currentDate = firstDayOfMonth
+
+    while (currentDate <= lastDayOfMonth) {
+        currentWeek.add(currentDate)
+        if (currentDate.dayOfWeek == DayOfWeek.SATURDAY || currentDate == lastDayOfMonth) {
+            weeks.add(currentWeek)
+            currentWeek = mutableListOf()
+        }
+        currentDate = currentDate.plusDays(1)
+    }
+
+    return weeks
+}
+
+
+
 
 @Composable
 fun EventChip(event: Event) {
-    val chipColor = MaterialTheme.colorScheme.primary
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val chipColor = if (currentUser != null && event.savedUsers.contains(currentUser.uid)) {
+        MaterialTheme.colorScheme.primary // Darker color for saved events
+    } else {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) // Lighter color for unsaved events
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -181,51 +298,53 @@ fun EventChip(event: Event) {
         Text(
             text = event.title,
             style = MaterialTheme.typography.labelSmall.copy(color = Color.White),
-            maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
 }
 
 @Composable
-fun EventItem(event: Event) {
+fun EventItem(navController: NavController,event: Event) {
     val context = LocalContext.current
-    val zoneId = ZoneId.systemDefault()
-
-    // Parse startTime and endTime from the event
-    // Adjust format if your timestamps are different
-    val startDateTime = LocalDateTime.parse(event.startTime, eventDateTimeParser)
-    val endDateTime = LocalDateTime.parse(event.endTime, eventDateTimeParser)
-
-    // Format for display
-    val displayFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-    val startText = startDateTime.format(displayFormatter)
-    val endText = endDateTime.format(displayFormatter)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
-        Text(text = event.title, style = MaterialTheme.typography.bodyLarge)
-        Text(text = "Location: ${event.location}", style = MaterialTheme.typography.bodyMedium)
-        Text(
-            text = "Time: $startText - $endText",
-            style = MaterialTheme.typography.bodySmall
+        // Replace the description area with the EventCard
+        EventCard(
+            title = event.title,
+            date = formatEventTime(event.startTime, event.endTime),
+            location = event.location,
+            photoPath = event.photo,
+            onClick = {
+                navController.navigate("event_details/${event.id}")
+            }
         )
-        // Optionally display other fields like description, eventUrl, etc.
-        // Text(text = event.description)
-        // If you have an image from event.photo, consider adding an AsyncImage here (Coil)
 
-        Button(onClick = { context.addEventToGoogleCalendar(event) }, modifier = Modifier.padding(top = 8.dp)) {
+        // Add to Google Calendar button
+        Button(
+            onClick = { context.addEventToGoogleCalendar(event) },
+            modifier = Modifier.padding(top = 8.dp)
+        ) {
             Text("Add to Google Calendar")
         }
+
         Divider(modifier = Modifier.padding(top = 8.dp))
     }
 }
 
+// Helper function to format the event time
+fun formatEventTime(startTime: String, endTime: String): String {
+    val startDateTime = LocalDateTime.parse(startTime, eventDateTimeParser)
+    val endDateTime = LocalDateTime.parse(endTime, eventDateTimeParser)
+    val formatter = DateTimeFormatter.ofPattern("MMM d, h:mm a")
+
+    return "${startDateTime.format(formatter)} - ${endDateTime.format(formatter)}"
+}
+
 fun Context.addEventToGoogleCalendar(event: Event) {
-    // Parse times again for calendar insertion
     val startDateTime = LocalDateTime.parse(event.startTime, eventDateTimeParser)
     val endDateTime = LocalDateTime.parse(event.endTime, eventDateTimeParser)
 
@@ -239,9 +358,7 @@ fun Context.addEventToGoogleCalendar(event: Event) {
         putExtra(CalendarContract.Events.EVENT_LOCATION, event.location)
         putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startMillis)
         putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endMillis)
-        // Optionally set the description
         putExtra(CalendarContract.Events.DESCRIPTION, event.description)
-        // If eventUrl is meaningful (e.g., a meeting link), consider adding it to description
     }
 
     if (intent.resolveActivity(packageManager) != null) {
@@ -256,7 +373,6 @@ fun CalendarRoute(navController: NavController) {
     var allEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Fetch events once when this composable is first entered
     LaunchedEffect(Unit) {
         FirebaseService.fetchEvents(context) { fetchedEvents ->
             allEvents = fetchedEvents
@@ -265,7 +381,6 @@ fun CalendarRoute(navController: NavController) {
     }
 
     if (isLoading) {
-        // Show a loading indicator while events are being fetched
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -273,7 +388,6 @@ fun CalendarRoute(navController: NavController) {
             CircularProgressIndicator()
         }
     } else {
-        // Now that events are loaded, pass them to CalendarPage
         CalendarPage(navController = navController, addedEvents = allEvents)
     }
 }
