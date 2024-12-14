@@ -34,6 +34,8 @@ import java.time.format.DateTimeFormatter
 import com.google.accompanist.pager.HorizontalPager
 import com.google.firebase.auth.FirebaseAuth
 import android.content.res.Configuration
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 
 
@@ -103,12 +105,18 @@ fun CalendarPage(
                     onDateSelected = { selectedDate = it },
                     modifier = Modifier.weight(1f)
                 )
-                EventListForSelectedDate(
-                    navController = navController,
-                    selectedDate = selectedDate,
-                    eventsByDate = eventsByDate,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    EventListForSelectedDate(
+                        navController = navController,
+                        selectedDate = selectedDate,
+                        eventsByDate = eventsByDate,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             } else {
                 // Landscape Layout
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -230,7 +238,9 @@ fun EventListForSelectedDate(navController: NavController,
     val eventsToday = selectedDate?.let { eventsByDate[it] } ?: emptyList()
 
     Box(
-        modifier = modifier.padding(16.dp)
+        modifier = modifier
+            .padding(16.dp)
+            .heightIn(max = 500.dp)
     ) {
         LazyColumn(
             contentPadding = PaddingValues(16.dp)

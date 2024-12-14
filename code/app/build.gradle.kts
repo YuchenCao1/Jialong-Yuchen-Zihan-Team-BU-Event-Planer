@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.android.application)
     id("com.google.gms.google-services")
     id("kotlin-kapt")
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -30,6 +31,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
         }
     }
     compileOptions {
@@ -131,4 +134,21 @@ dependencies {
             force("androidx.test.espresso:espresso-core:3.5.0")
         }
     }
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4")
+    testImplementation("org.mockito:mockito-core:4.11.0")
+
+    implementation ("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
+    testImplementation( "org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
+
+    androidTestImplementation ("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation ("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation ("androidx.test:rules:1.5.0")
+
+    androidTestImplementation ("androidx.compose.ui:ui-test-junit4")
+    debugImplementation ("androidx.compose.ui:ui-test-manifest")
+
+    implementation ("com.google.firebase:firebase-crashlytics:18.4.1")
+    implementation ("com.google.firebase:firebase-analytics-ktx:21.3.0")
 }

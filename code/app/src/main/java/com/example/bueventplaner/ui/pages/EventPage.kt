@@ -56,6 +56,8 @@ import android.content.Context
 import com.example.bueventplaner.data.model.EventEntity
 import android.util.Log
 import com.example.bueventplaner.BuildConfig
+import androidx.compose.ui.platform.testTag
+
 
 
 fun isOnline(context: Context): Boolean {
@@ -458,7 +460,8 @@ fun EventDetailsView(navController: NavController, eventId: String?, eventDao: E
                 title = {
                     Text(
                         text = "Event Details",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.testTag("eventDetailsView")
                     )
                 },
                 navigationIcon = {
