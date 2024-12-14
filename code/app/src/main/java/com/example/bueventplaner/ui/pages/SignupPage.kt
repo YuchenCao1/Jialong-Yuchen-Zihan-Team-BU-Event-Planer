@@ -2,6 +2,8 @@ package com.example.bueventplaner.ui.pages
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -81,12 +83,15 @@ fun AuthPage2(
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
 
+    // Using Column for layout and wrapping it inside a Scrollable Column to ensure it can scroll
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()), // Make the layout scrollable
         verticalArrangement = Arrangement.Center
     ) {
+        // Card to hold the UI components
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
@@ -96,6 +101,7 @@ fun AuthPage2(
                 modifier = Modifier.padding(24.dp),
                 verticalArrangement = Arrangement.Center
             ) {
+                // Title Text
                 Text(
                     text = "Sign up",
                     style = MaterialTheme.typography.headlineMedium,
@@ -105,7 +111,7 @@ fun AuthPage2(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Username
+                // Email TextField
                 TextField(
                     value = email,
                     onValueChange = { email = it },
@@ -122,7 +128,7 @@ fun AuthPage2(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Password
+                // Password TextField
                 TextField(
                     value = password,
                     onValueChange = { password = it },
@@ -140,6 +146,7 @@ fun AuthPage2(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // First Name TextField
                 TextField(
                     value = firstName,
                     onValueChange = { firstName = it },
@@ -156,6 +163,7 @@ fun AuthPage2(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Last Name TextField
                 TextField(
                     value = lastName,
                     onValueChange = { lastName = it },
@@ -171,9 +179,11 @@ fun AuthPage2(
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
-                // register button
+
+                // Register Button
                 Button(
                     onClick = {
+                        // Trigger register function when button is clicked
                         onRegister(email, password, firstName, lastName)
                     },
                     modifier = Modifier
@@ -186,6 +196,7 @@ fun AuthPage2(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Navigation to Login page if user already has an account
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center

@@ -16,6 +16,8 @@ import com.example.bueventplaner.R
 import com.google.firebase.auth.FirebaseAuth
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalContext
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
@@ -114,9 +116,11 @@ fun AuthPage(
     var password by remember { mutableStateOf("123456") }
     var rememberMe by remember { mutableStateOf(false) }
 
+    // Wrap the whole layout in a Scrollable Column to handle small screen sizes in both portrait and landscape modes.
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState()) // Make the whole layout scrollable
             .padding(16.dp),
         verticalArrangement = Arrangement.Center
     ) {
