@@ -62,7 +62,8 @@ Scan this QR code to download the app:
 ### **Managing Your Profile**
 1. Go to the **Profile** tab.
 2. Edit your name or upload a new profile picture by tapping the profile area.
-3. View a list of events you’ve added for in the **Upcoming** tab.
+3. View a list of events you’ve added for in the **Upcoming** tab. for events that time passed will in the **Passed** tab.
+4. Log in or out of your account using the **Sign In/Out** button.
 
 ---
 
@@ -77,22 +78,6 @@ Scan this QR code to download the app:
 - **Google Maps and Geocoding API**: Display event locations dynamically.
 - **Accompanist Pager**: Swipeable views for weekly calendar navigation.
 - **Coil**: For efficient image loading.
-
----
-
-## Contributions
-We welcome contributions to improve the app! To contribute:
-1. Fork the repository.
-2. Create a feature branch:
-   ```bash
-   git checkout -b feature-name
-   ```
-3. Commit changes and open a pull request.
-
----
-
-## License
-This project is licensed under the **MIT License**. You’re free to modify and distribute it as per the license terms.
 
 ---
 
