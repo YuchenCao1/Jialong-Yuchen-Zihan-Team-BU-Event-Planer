@@ -1,7 +1,7 @@
 
 # BU Event Planner
 
-Developer：Jialong Ke, Yuchen Cao,Zihan Li, 
+Developer：Jialong Ke, Yuchen Cao, Zihan Li, 
 
 The **BU Event Planner** is a user-friendly app designed to help Boston University students and community members explore and manage events seamlessly. With features like an interactive calendar, personalized event recommendations, and Google Calendar integration, it ensures users never miss out on exciting opportunities.
 
