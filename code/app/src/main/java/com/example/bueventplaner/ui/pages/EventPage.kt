@@ -881,83 +881,89 @@ fun EventLocationCardWithMap(
     var locationLatLng by remember { mutableStateOf<LatLng?>(null) }
     val cameraPositionState = rememberCameraPositionState()
 
+    val shouldShowMap = address != "Zoom" && address != "Online" && address != ""
+
     LaunchedEffect(address) {
-        try {
-            val response = RetrofitInstance.geocodingService.getGeocode(address, apiKey)
+        if (shouldShowMap) {
+            try {
+                val response = RetrofitInstance.geocodingService.getGeocode(address, apiKey)
 
-            val location = response.results.firstOrNull()?.geometry?.location
+                val location = response.results.firstOrNull()?.geometry?.location
 
-            if (location != null) {
-                val googleLatLng = LatLng(location.lat, location.lng)
-                locationLatLng = googleLatLng
+                if (location != null) {
+                    val googleLatLng = LatLng(location.lat, location.lng)
+                    locationLatLng = googleLatLng
 
-                cameraPositionState.position = CameraPosition.fromLatLngZoom(
-                    googleLatLng,
-                    13f
-                )
-            } else {
-                println("No location found for the given address.")
+                    cameraPositionState.position = CameraPosition.fromLatLngZoom(
+                        googleLatLng,
+                        13f
+                    )
+                } else {
+                    println("No location found for the given address.")
+                }
+            } catch (e: Exception) {
+                println("Error fetching geocode: ${e.localizedMessage}")
             }
-        } catch (e: Exception) {
-            println("Error fetching geocode: ${e.localizedMessage}")
         }
     }
 
-    Column(
-        modifier = Modifier
-            .padding(6.dp)
-            .background(MaterialTheme.colorScheme.surface)
-            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), MaterialTheme.shapes.medium)
-    ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = "Location Icon",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
+    if (shouldShowMap) {
+        Column(
+            modifier = Modifier
+                .padding(6.dp)
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), MaterialTheme.shapes.medium)
+        ) {
+            Column(modifier = Modifier.padding(8.dp)) {
                 Text(
-                    text = address,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
-            }
-        }
-
-        if (locationLatLng != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-            ) {
-                GoogleMap(
-                    modifier = Modifier.fillMaxSize(),
-                    cameraPositionState = cameraPositionState
-                ) {
-                    Marker(
-                        state = MarkerState(position = LatLng(locationLatLng!!.latitude, locationLatLng!!.longitude)),
-
-                        title = title,
-                        snippet = address
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Location Icon",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = address,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Black
                     )
                 }
             }
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+
+            if (locationLatLng != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                ) {
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState
+                    ) {
+                        Marker(
+                            state = MarkerState(position = LatLng(locationLatLng!!.latitude, locationLatLng!!.longitude)),
+
+                            title = title,
+                            snippet = address
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
         }
     }
